@@ -1,30 +1,35 @@
 #include <Arduino.h>
 #include "driver/pcnt.h"
 
-#define PULSE_INPUT_PIN 34 // パルスの入力ピン 今回はエンコーダのA相を接続
-#define PULSE_CTRL_PIN 35  // 制御ピン 今回はエンコーダのB相を接続
+#define ENC_A 34
+#define ENC_B 35
 
 #define MA_N 26
 #define MA_P 25
+#define MA_P_PWM_CH 0
 #define MB_N 33
 #define MB_P 32
+#define MB_P_PWM_CH 2
+#define PWMFREQ 1000
+#define PWM_RES_BIT 8
 
 #define DEADTIME 1
 
 void setup()
 {
-  pcnt_config_t pcnt_config; // 設定用の構造体の宣言
-  pcnt_config.pulse_gpio_num = PULSE_INPUT_PIN;
-  pcnt_config.ctrl_gpio_num = PULSE_CTRL_PIN;
+  // pcnt init
+  pcnt_config_t pcnt_config;
+  pcnt_config.pulse_gpio_num = ENC_A;
+  pcnt_config.ctrl_gpio_num = ENC_B;
   pcnt_config.lctrl_mode = PCNT_MODE_REVERSE;
   pcnt_config.hctrl_mode = PCNT_MODE_KEEP;
   pcnt_config.channel = PCNT_CHANNEL_0;
   pcnt_config.unit = PCNT_UNIT_0;
   pcnt_config.pos_mode = PCNT_COUNT_INC;
   pcnt_config.neg_mode = PCNT_COUNT_DEC;
-  pcnt_unit_config(&pcnt_config);  // ユニット初期化
-  pcnt_counter_pause(PCNT_UNIT_0); // カウンタ一時停止
-  pcnt_counter_clear(PCNT_UNIT_0); // カウンタ初期化
+  pcnt_unit_config(&pcnt_config);
+  pcnt_counter_pause(PCNT_UNIT_0);
+  pcnt_counter_clear(PCNT_UNIT_0);
 
   Serial.begin(115200);
   pinMode(MA_N, OUTPUT);
@@ -32,11 +37,22 @@ void setup()
   pinMode(MB_N, OUTPUT);
   pinMode(MB_P, OUTPUT);
 
-  delay(5000);
-  pcnt_counter_resume(PCNT_UNIT_0); // カウント開始
-  Serial.println("breaking");
+  // pwm init (Pch)
+  ledcSetup(MA_P_PWM_CH, PWMFREQ, PWM_RES_BIT);
+  ledcSetup(MB_P_PWM_CH, PWMFREQ, PWM_RES_BIT);
+  ledcWrite(MA_P_PWM_CH, 0);
+  ledcWrite(MB_P_PWM_CH, 0);
+
+  // Pch PWM attach
+  ledcAttachPin(MA_P, MA_P_PWM_CH);
+  ledcAttachPin(MB_P, MB_P_PWM_CH);
+
+  // Nch breaking
   digitalWrite(MA_N, HIGH);
   digitalWrite(MB_N, HIGH);
+
+  // pcnt on
+  pcnt_counter_resume(PCNT_UNIT_0);
 
   delay(1000);
 }
@@ -48,12 +64,12 @@ void loop()
   Serial.println("powering");
   digitalWrite(MB_N, LOW);
   delay(DEADTIME);
-  digitalWrite(MB_P, HIGH);
+  ledcWrite(MB_P_PWM_CH, 255);
   do
   {
     pcnt_get_counter_value(PCNT_UNIT_0, &count);
   } while (count < 1000);
-  digitalWrite(MB_P, LOW);
+  ledcWrite(MB_P_PWM_CH, 0);
   do
   {
     pcnt_get_counter_value(PCNT_UNIT_0, &count);
@@ -65,12 +81,12 @@ void loop()
   Serial.println("reverse powering");
   digitalWrite(MA_N, LOW);
   delay(DEADTIME);
-  digitalWrite(MA_P, HIGH);
+  ledcWrite(MA_P_PWM_CH, 255);
   do
   {
     pcnt_get_counter_value(PCNT_UNIT_0, &count);
   } while (count > 200);
-  digitalWrite(MA_P, LOW);
+  ledcWrite(MA_P_PWM_CH, 0);
   do
   {
     pcnt_get_counter_value(PCNT_UNIT_0, &count);
