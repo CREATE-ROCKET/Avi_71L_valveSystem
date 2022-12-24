@@ -41,7 +41,7 @@
 \end{figure}
 
 弱電系は制御、通信を行う電気系であり、マイコンはESP32を用いる。
-強電系はDCモータを駆動する電気系であり、Pch MOSFETおよびNch MOSGETから構成されるHブリッジによってモータを駆動する。
+強電系はDCモータを駆動する電気系であり、Pch MOSFETおよびNch MOSGETから構成されるHブリッジによってDCモータを駆動する。DCモーターはメインバルブの開閉に用いる。
 
 強電系と弱電系の間の通信はフォトカプラによって絶縁される。
 
@@ -59,12 +59,12 @@
 \begin{table}[htbp]
     \begin{tabular}{c|c|c}
         \hline
-        ブロック名        & 型番                  & 備考                                        \\ \hline \hline
-        エンコーダ付きDCモータ & 備考参照                & \url{https://www.pololu.com/product/2828} \\ \hline
-        Pch MOSFET   & MTB060P06I3         & 60V 16.7A                                 \\ \hline
-        Nch MOSFET   & MTB30N06I3          & 60V 22A                                   \\ \hline
-        フォトカプラ       & TLP785(GB F)        & マイコンからはNch MOSFET(BSS138)を用いてドライブ         \\ \hline
-        ESP32        & ESP32-WROOM-32E-N16 &                                           \\
+        ブロック名             & 型番                & 備考                                      \\ \hline \hline
+        エンコーダ付きDCモータ & 備考参照            & \url{https://www.pololu.com/product/2828} \\ \hline
+        Pch MOSFET             & MTB060P06I3         & 60V 16.7A                                 \\ \hline
+        Nch MOSFET             & MTB30N06I3          & 60V 22A                                   \\ \hline
+        フォトカプラ           & TLP785(GB F)        & Nch MOSFET(BSS138)を用いてドライブ        \\ \hline
+        ESP32                  & ESP32-WROOM-32E-N16 &                                           \\
         \hline
     \end{tabular}
     \caption{ロケット搭載基板における主要搭載パーツ}
@@ -94,20 +94,23 @@ GSE電装のブロックダイヤグラムを図\ref{GSEAviChart} に示す。
 \begin{table}[htbp]
     \begin{tabular}{c|c|c}
         \hline
-        ブロック名      & 型番            & 備考                                  \\ \hline \hline
-        リレー        & G4A-1A-E DC24 & ノーマルオープン                            \\ \hline
-        12v レギュレータ & NJM7812FA     & ヒートシンクを取り付け、使用                      \\ \hline
-        MOSFET     & MTB30N06I3    & 60V 22A 電磁弁用、電磁弁の両極に保護のためダイオードを取付   \\ \hline
-        MOSFET     & TK5R3A06PL    & 60V 56A イグナイタ用、電磁弁の両極に保護のためダイオードを取付 \\ \hline
-        フォトカプラ     & TLP785(GB F)  & マイコンからはNch MOSFET(BSS138)を用いてドライブ   \\ \hline
-        ESP32      & XIAO ESP32C3  & 中継ボックス・コントローラボックス両方にて使用             \\
+        ブロック名           & 型番          & 備考                                                           \\ \hline \hline
+        リレー               & G4A-1A-E DC24 & ノーマルオープン                                               \\ \hline
+        12v レギュレータ     & NJM7812FA     & ヒートシンクを取り付けて使用                                   \\ \hline
+        Nch MOSFET           & MTB30N06I3    & 60V 22A 電磁弁用、電磁弁の両極に保護のためダイオードを取付     \\ \hline
+        Nch MOSFET           & TK5R3A06PL    & 60V 56A イグナイタ用、電磁弁の両極に保護のためダイオードを取付 \\ \hline
+        フォトカプラ         & TLP785(GB F)  & Nch MOSFET(BSS138)を用いてドライブ                             \\ \hline
+        絶縁レギュレータ(5v) & MAU105        &                                                                \\ \hline
+        ESP32                & XIAO ESP32C3  &                                                                \\
         \hline
     \end{tabular}
     \caption{ロケット搭載基板における主要搭載パーツ}
     \label{GSEAviPartList}
 \end{table}
 
-\subsection{点火シーケンス時の動きについて}
+\subsection{メインバルブ駆動用DCモータの制御について}
+
+\subsection{点火シーケンス時の電装システムの動作について}
 
 
 \end{document}
