@@ -29,6 +29,20 @@ double target_angle = 45. / 180. * M_PI; // 目標角度 [rad]
 double Kp = 40., Kd = 0.9;               // コントローラのゲイン
 double MAX_V = 12.;                      // 電源電圧
 double Voltage = 0.;                     // 指令電圧
+int16_t fric_up_border = 300, fric_down_border = 5;
+uint8_t isMdFinished = 0;
+
+// memory variables
+int MDLogMemIndex = 0;
+struct MDLogData
+{
+  unsigned long _time;
+  int16_t _enc_pcnt;
+  int16_t _pwm_ratio;
+  double _motor_angle;
+  double _d_motor_angle;
+};
+struct MDLogData MDLogDataMem[4096];
 
 TaskHandle_t controlHandle;
 
@@ -41,6 +55,7 @@ IRAM_ATTR void controlDCM(void *parameters)
   {
     // 読み取り値をpulseに代入
     int16_t enc_pcnt; /**エンコーダ読み取り用変数*/
+    MDLogDataMem[MDLogMemIndex]._time = micros();
     pcnt_get_counter_value(PCNT_UNIT_0, &enc_pcnt);
 
     // old_motor_angleに1つ前の時刻の角度を代入
@@ -69,36 +84,52 @@ IRAM_ATTR void controlDCM(void *parameters)
     pwm_ratio = (int)(Voltage / MAX_V * 1024.); // 指令電圧をPWMの指令duty比に変換　duty比の範囲は-1024～1024
 
     // 摩擦補償
-    if (pwm_ratio > 5)
+    if (pwm_ratio > fric_down_border)
     {
-      if (pwm_ratio < 300)
+      if (pwm_ratio < fric_up_border)
       {
-        pwm_ratio = 300;
+        pwm_ratio = fric_up_border;
       }
     }
-    else if (pwm_ratio < -5)
+    else if (pwm_ratio < (-1 * fric_down_border))
     {
-      if (pwm_ratio > -300)
+      if (pwm_ratio > (-1 * fric_up_border))
       {
-        pwm_ratio = -300;
+        pwm_ratio = (-1 * fric_up_border);
       }
     }
 
-    // モーター制御
-    if ((fabsf(motor_angle - target_angle) < 1e-2) && (fabsf(old_motor_angle - target_angle) < 1e-2) && (fabsf(d_motor_angle) < 5e-2))
+    // モーター制御が終了していた場合255回モーターのコントローラーをスキップし、タスクを終了
+    if (isMdFinished == 255)
     {
+      Serial.println("time,enc_pcnt,pwm_ratio,motor_angle,d_motor_angle");
+      for (int i = 0; i < MDLogMemIndex; i++)
+      {
+        Serial.printf("%d,%d,%d,%f5.5,%f5.5\n", MDLogDataMem[i]._time, MDLogDataMem[i]._enc_pcnt, MDLogDataMem[i]._pwm_ratio, MDLogDataMem[i]._motor_angle, MDLogDataMem[i]._d_motor_angle);
+      }
+      MDLogMemIndex = 0;
+      isMdFinished = 0;
+
+      vTaskDelete(controlHandle);
+    }
+    else if (isMdFinished > 0)
+    {
+      isMdFinished++;
+      digitalWrite(MA_N, HIGH);
+      digitalWrite(MB_N, HIGH);
+    }
+    else if ((fabsf(motor_angle - target_angle) < 1e-2) && (fabsf(old_motor_angle - target_angle) < 1e-2) && (fabsf(d_motor_angle) < 5e-2))
+    {
+      // モーター制御
       // 目標角に到達したら、PWMを停止する
       ledcWrite(MA_P_PWM_CH, 0);
       ledcWrite(MB_P_PWM_CH, 0);
       digitalWrite(MA_N, LOW);
       digitalWrite(MB_N, LOW);
-      Serial.println("motor control finished");
-      vTaskDelete(controlHandle);
-      // delay(1);
-      // digitalWrite(MA_N, HIGH);
-      // digitalWrite(MB_N, HIGH);
+
+      isMdFinished = 1;
     }
-    if ((pwm_ratio * old_pwm_ratio) <= 0)
+    else if ((pwm_ratio * old_pwm_ratio) <= 0)
     {
       // 指令値が正負逆転した場合はfetをidle状態にする
       digitalWrite(MA_N, LOW);
@@ -119,7 +150,11 @@ IRAM_ATTR void controlDCM(void *parameters)
       ledcWrite(MA_P_PWM_CH, (-1) * pwm_ratio);
     }
 
-    // Serial.printf("%d,%d,%f,%f\n", enc_pcnt, pwm_ratio, motor_angle, d_motor_angle);
+    // write log data
+    MDLogDataMem[MDLogMemIndex]._enc_pcnt = enc_pcnt;
+    MDLogDataMem[MDLogMemIndex]._pwm_ratio = pwm_ratio;
+    MDLogDataMem[MDLogMemIndex]._motor_angle = motor_angle;
+    MDLogDataMem[MDLogMemIndex++]._d_motor_angle = d_motor_angle;
 
     vTaskDelayUntil(&xLastWakeTime, CONTROLINTERVAL_MS / portTICK_PERIOD_MS);
   }
@@ -194,5 +229,5 @@ void loop()
   int16_t enc_pcnt;
   pcnt_get_counter_value(PCNT_UNIT_0, &enc_pcnt);
   // Serial.printf("%d,,,\n", enc_pcnt);
-  delay(10);
+  delay(1000);
 }
