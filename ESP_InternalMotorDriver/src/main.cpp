@@ -4,11 +4,11 @@
 #define ENC_A 34
 #define ENC_B 35
 
-#define MA_N 26
-#define MA_P 25
+#define MA_N 21
+#define MA_P 19
 #define MA_P_PWM_CH 0
-#define MB_N 33
-#define MB_P 32
+#define MB_N 23
+#define MB_P 22
 #define MB_P_PWM_CH 2
 #define PWMFREQ 5000
 #define PWM_RES_BIT 10
