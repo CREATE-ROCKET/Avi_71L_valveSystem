@@ -9,8 +9,8 @@
 /**serial configuration*/
 #define SER_PC Serial
 #define SER_RELAY Serial1
-#define SER_RELAY_TX 20
-#define SER_RELAY_RX 21
+#define SER_RELAY_TX 21
+#define SER_RELAY_RX 20
 
 /**comTask configuration*/
 #define TASKINTERVAL_MS 10

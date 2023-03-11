@@ -8,9 +8,9 @@
 
 /**serial configuration*/
 #define SER_RELAY Serial1
-#define SER_RELAY_TX 20
-#define SER_RELAY_RX 21
-#define SER_ROCKET Serial
+#define SER_RELAY_TX 21
+#define SER_RELAY_RX 20
+#define SER_ROCKET Serial0
 #define SER_ROCKET_TX 7
 #define SER_ROCKET_RX 6
 
@@ -81,8 +81,8 @@ IRAM_ATTR uint8_t checkCmd(uint8_t *cmd)
 void setup()
 {
   /**serial init*/
-  SER_ROCKET.begin(115200);
-  SER_RELAY.begin(115200, SERIAL_8N1, SER_ROCKET_RX, SER_ROCKET_TX);
+  SER_ROCKET.begin(115200, SERIAL_8N1, SER_ROCKET_RX, SER_ROCKET_TX);
+  SER_RELAY.begin(115200, SERIAL_8N1, SER_RELAY_RX, SER_RELAY_TX);
 
   /**pin init*/
   pinMode(EXT_D_SW, INPUT);
