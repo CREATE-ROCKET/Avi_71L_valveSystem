@@ -95,6 +95,6 @@ void loop()
   if (SER_PC.available())
   {
     uint8_t tmp = SER_PC.read();
-    SER_RELAY.print(tmp);
+    SER_RELAY.write(tmp);
   }
 }
