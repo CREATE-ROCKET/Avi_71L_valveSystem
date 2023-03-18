@@ -42,22 +42,7 @@ IRAM_ATTR void comTask(void *parameters)
     {
       SER_RELAY.print('e');
     }
-    if (digitalRead(INT_D_SW))
-    {
-      SER_RELAY.print('I');
-    }
-    else
-    {
-      SER_RELAY.print('i');
-    }
-    if (digitalRead(FILL_SW))
-    {
-      SER_RELAY.print('F');
-    }
-    else
-    {
-      SER_RELAY.print('f');
-    }
+
     if (digitalRead(IGN_SW))
     {
       SER_RELAY.print('L');
@@ -66,6 +51,25 @@ IRAM_ATTR void comTask(void *parameters)
     {
       SER_RELAY.print('l');
     }
+
+    if (digitalRead(INT_D_SW))
+    {
+      SER_RELAY.print('I');
+    }
+    else
+    {
+      SER_RELAY.print('i');
+    }
+
+    if (digitalRead(FILL_SW))
+    {
+      SER_RELAY.print('F');
+    }
+    else
+    {
+      SER_RELAY.print('f');
+    }
+
     vTaskDelayUntil(&xLastWakeTime, TASKINTERVAL_MS / portTICK_PERIOD_MS);
   }
 }
@@ -77,10 +81,10 @@ void setup()
   SER_RELAY.begin(115200, SERIAL_8N1, SER_RELAY_RX, SER_RELAY_TX);
 
   /**pin init*/
-  pinMode(EXT_D_SW, INPUT);
-  pinMode(INT_D_SW, INPUT);
-  pinMode(FILL_SW, INPUT);
-  pinMode(IGN_SW, INPUT);
+  pinMode(EXT_D_SW, INPUT_PULLDOWN);
+  pinMode(INT_D_SW, INPUT_PULLDOWN);
+  pinMode(FILL_SW, INPUT_PULLDOWN);
+  pinMode(IGN_SW, INPUT_PULLDOWN);
 
   xTaskCreateUniversal(comTask, "comTask", 8192, NULL, 1, &comTaskHandle, PRO_CPU_NUM);
 }
