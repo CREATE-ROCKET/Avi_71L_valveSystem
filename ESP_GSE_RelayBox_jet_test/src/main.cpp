@@ -20,6 +20,7 @@
 
 uint32_t igntime;
 bool isValveWaitMoving = false;
+bool igniting = false;
 
 void setup()
 {
@@ -79,11 +80,16 @@ void loop()
       digitalWrite(O2_FET, HIGH);
       digitalWrite(IGN_FET, HIGH);
       /** 1秒後にバルブを動作させる*/
-      igntime = micros();
-      isValveWaitMoving = true;
+      if (!igniting)
+      {
+        igntime = micros();
+        isValveWaitMoving = true;
+      }
+      igniting = true;
     }
     else if (cmd == 'l')
     {
+      igniting = false;
       digitalWrite(O2_FET, LOW);
       digitalWrite(IGN_FET, LOW);
     }
@@ -98,12 +104,15 @@ void loop()
     }
   }
 
-  if (isValveWaitMoving)
+  if (igniting)
   {
-    if (micros() - igntime > 1000)
+    if (isValveWaitMoving)
     {
-      isValveWaitMoving = false;
-      SER_ROCKET.write('a');
+      if (micros() - igntime > 1000000)
+      {
+        isValveWaitMoving = false;
+        SER_ROCKET.write('a');
+      }
     }
   }
 }
