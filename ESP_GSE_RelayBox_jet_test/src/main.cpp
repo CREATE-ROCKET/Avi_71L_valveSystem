@@ -1,19 +1,19 @@
 #include <Arduino.h>
 
 /**pin configuration*/
-#define EXT_D_FET 8
-#define INT_D_FET 10
-#define FILL_FET 9
-#define O2_FET 5
-#define IGN_FET 4
+#define EXT_D_FET 12
+#define INT_D_FET 14
+#define FILL_FET 27
+#define O2_FET 26
+#define IGN_FET 25
 
 /**serial configuration*/
 #define SER_CON Serial1
-#define SER_CON_TX 21
-#define SER_CON_RX 20
-#define SER_ROCKET Serial0
-#define SER_ROCKET_TX 7
-#define SER_ROCKET_RX 6
+#define SER_CON_TX 18
+#define SER_CON_RX 19
+#define SER_ROCKET Serial2
+#define SER_ROCKET_TX 16
+#define SER_ROCKET_RX 17
 
 /**comTask configuration*/
 #define TASKINTERVAL_MS 10
@@ -24,16 +24,20 @@ bool igniting = false;
 
 void setup()
 {
-  /**serial init*/
-  SER_ROCKET.begin(115200, SERIAL_8N1, SER_ROCKET_RX, SER_ROCKET_TX);
-  SER_CON.begin(115200, SERIAL_8N1, SER_CON_RX, SER_CON_TX);
-
   /**pin init*/
   pinMode(EXT_D_FET, OUTPUT);
   pinMode(INT_D_FET, OUTPUT);
   pinMode(FILL_FET, OUTPUT);
   pinMode(IGN_FET, OUTPUT);
   pinMode(O2_FET, OUTPUT);
+
+  /**serial init*/
+  pinMode(SER_ROCKET_TX, OUTPUT);
+  pinMode(SER_CON_RX, INPUT);
+  pinMode(SER_CON_TX, OUTPUT);
+  pinMode(SER_CON_RX, INPUT);
+  SER_ROCKET.begin(115200, SERIAL_8N1, SER_ROCKET_RX, SER_ROCKET_TX);
+  SER_CON.begin(115200, SERIAL_8N1, SER_CON_RX, SER_CON_TX);
 
   digitalWrite(EXT_D_FET, LOW);
   digitalWrite(INT_D_FET, LOW);
