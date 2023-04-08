@@ -1,19 +1,19 @@
 #include <Arduino.h>
 
 /**pin configuration*/
-#define EXT_D_FET 12
-#define INT_D_FET 14
-#define FILL_FET 27
-#define O2_FET 26
-#define IGN_FET 25
+#define EXT_D_FET 19
+#define INT_D_FET 21
+#define FILL_FET 18
+#define O2_FET 17
+#define IGN_FET 16
 
 /**serial configuration*/
 #define SER_CON Serial1
-#define SER_CON_TX 18
-#define SER_CON_RX 19
+#define SER_CON_TX 27
+#define SER_CON_RX 13
 #define SER_ROCKET Serial2
-#define SER_ROCKET_TX 16
-#define SER_ROCKET_RX 17
+#define SER_ROCKET_TX 26
+#define SER_ROCKET_RX 25
 
 /**comTask configuration*/
 #define TASKINTERVAL_MS 10
