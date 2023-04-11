@@ -1,8 +1,8 @@
 #include <Arduino.h>
 #include "driver/pcnt.h"
 
-#define ENC_A 35
-#define ENC_B 34
+#define ENC_A 34
+#define ENC_B 35
 
 #define MA_N 21
 #define MA_P 19
