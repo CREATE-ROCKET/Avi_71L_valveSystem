@@ -1,4 +1,5 @@
 #include <Arduino.h>
+#include "../../communication/gseCom.hpp"
 
 /**pin configuration*/
 #define EXT_D_SW 5
@@ -7,104 +8,104 @@
 #define IGN_SW 2
 
 /**serial configuration*/
-#define SER_PC Serial
+#define SER_PC Serial0
 #define SER_RELAY Serial1
 #define SER_RELAY_TX 21
 #define SER_RELAY_RX 20
 
-/**comTask configuration*/
+/**swComTask configuration*/
 #define TASKINTERVAL_MS 10
 
-/**com consts.*/
+/**ack configuration*/
+#define ACKWAITTIME 10 /**ackの待ち時間*/
+#define OWNNODEID 0b00000001
 
-/**comTask parameters*/
-TaskHandle_t comTaskHandle;
-bool isSequenceStarted = 0;           /**点火シーケンスに入ったことを示す*/
-uint8_t prescaleWhileNonSequence = 0; /**点火シーケンスに入ってない場合インクリメントされ，99のときにコマンド処理が実行*/
-bool isCmd2RelayBRDSended = 0;        /**1なら中継基板に対し送信済み，応答が一定時間ない場合PCに対してコマンドを発行し送信*/
-uint32_t timeCmd2RelayBRDSended;      /**中継基板に対し送信した時刻*/
+/**受信バッファ configuration*/
+#define RXPACKETBFFMAX 128
 
-typedef struct
+/**受信バッファ*/
+class rxBff
 {
-  uint8_t data[12];
+public:
   uint8_t index = 0;
-} recieve;
+  uint8_t data[RXPACKETBFFMAX];
+};
+rxBff PCRxBff;
+rxBff RelayRxBff;
 
-recieve recieveDatafromRelayBRD;
-recieve recieveDatafromPC;
+/**com consts.*/
+TaskHandle_t swComTaskHandle; /**スイッチのデータ送信用の処理系*/
 
-/**
- * @brief コマンドを作成する
- *
- * @param cmd コマンドを格納するポインタ
- * @param cmdid　発行するコマンドのコマンド番号
- * @param parameters 発行するコマンドのパラメーターの配列のポインタ
- * @param parameterlength 発行するコマンドのパラメータ
- */
-IRAM_ATTR void
-makeCmd(uint8_t *cmd, uint8_t cmdid, uint8_t *parameters, uint8_t parameterlength)
+/** コマンド関係パラメータ*/
+class ackRecieveClass
 {
-  cmd[0] = 0x71;
-  cmd[1] = cmdid;
-  cmd[2] = parameterlength + 4;
-  memcpy(parameters, cmd + 3, parameterlength);
-  uint8_t sum = 0;
-  for (int i = 0; i < parameterlength; i++)
+public:
+  static bool isAckRecieved;      /**trueならpcからackを受信済み，応答したらfalseに変更*/
+  static uint32_t ackRecieveTime; /**pcからackを受け取った時刻(us)，ACKWAITTIME後までに受信がなければ*/
+  static uint8_t ackNodesIds;     /**ackのノードIDのOR*/
+};
+
+/** 受信用関数，パケット受信完了したらtrueを返す*/
+IRAM_ATTR bool recieve(HardwareSerial SER, rxBff rx)
+{
+  while (SER.available())
   {
-    sum += parameters[i] * 63;
+    uint8_t tmp = SER.read();
+
+    if (rx.index == 0) /**ヘッダ受信*/
+    {
+      if (tmp == 0x43)
+      {
+        rx.data[rx.index++] = tmp;
+      }
+    }
+    else if ((rx.index == 1) || (rx.index == 2)) /**cmdidおよびlengthの受信*/
+    {
+      rx.data[rx.index++] = tmp;
+    }
+    else if (rx.index < (rx.data[2] - 1)) /**受信完了1個前までの処理*/
+    {
+      rx.data[rx.index++] = tmp;
+    }
+    else if (rx.index == rx.data[2] - 1) /**受信完了*/
+    {
+      rx.data[rx.index] = tmp;
+      rx.index = 0;
+      if (GseCom::checkPacket(rx.data) == 0)
+      {
+        return true;
+      }
+    }
   }
-  cmd[parameterlength + 3] = sum; /**parity*/
+  return false;
 }
 
-/**
- * @brief parityを確認し，正規のコマンドか確認
- *
- * @param cmd　コマンドの配列のポインタ
- * @return 正常なら0,異常なら1
- */
-IRAM_ATTR uint8_t checkCmd(uint8_t *cmd)
+IRAM_ATTR void send(HardwareSerial SER, uint8_t packet[RXPACKETBFFMAX])
 {
-  uint8_t sum = 0;
-  for (int i = 3; i < cmd[3] - 1; i++)
-  {
-    sum += cmd[i] * 63;
-  }
-  if (sum == cmd[cmd[3] - 1])
-  {
-    return 0;
-  }
-  else
-  {
-    return 1;
-  }
+  SER.write(packet, packet[2]);
 }
 
 /** 中継基板に対し通信を発行するスレッド*/
-IRAM_ATTR void comTask(void *parameters)
+IRAM_ATTR void swComTask(void *parameters)
 {
   portTickType xLastWakeTime = xTaskGetTickCount();
   for (;;)
   {
-    if (isSequenceStarted || (prescaleWhileNonSequence++ == 99))
-    {
-      prescaleWhileNonSequence = 0;
+    /**スイッチの状態確認*/
+    uint8_t extdstatus = digitalRead(EXT_D_SW);
+    uint8_t intdstatus = digitalRead(INT_D_SW);
+    uint8_t fillstatus = digitalRead(FILL_SW);
+    uint8_t ignstatus = digitalRead(IGN_SW);
 
-      /**スイッチの状態確認*/
-      int extdstatus = digitalRead(EXT_D_SW);
-      int intdstatus = digitalRead(INT_D_SW);
-      int fillstatus = digitalRead(FILL_SW);
-      int ignstatus = digitalRead(IGN_SW);
+    /**パラメータの生成*/
+    uint8_t swPayload[1];
+    swPayload[0] = (extdstatus << 7) | (intdstatus << 6) | (fillstatus << 5) | (ignstatus);
 
-      /**中継基板へのコマンド送信*/
-      uint8_t cmd2RelayBRDParameter[1] = {(extdstatus << 7) | (intdstatus << 6) | (fillstatus << 5) | (ignstatus << 4)};
-      uint8_t cmd2RelayBRD[5];
-      makeCmd(cmd2RelayBRD, 0x21, cmd2RelayBRDParameter, 1);
-      SER_RELAY.write(cmd2RelayBRD, 5);
+    /**パラメータからパケットの生成*/
+    uint8_t swPacket[5];
+    GseCom::makePacket(swPacket, 0x21, swPayload, 1);
+    send(SER_RELAY, swPacket);
 
-      /**送信したことを中継基板からの受信スレッドに伝える*/
-      isCmd2RelayBRDSended = 1;
-      timeCmd2RelayBRDSended = micros();
-    }
     vTaskDelayUntil(&xLastWakeTime, TASKINTERVAL_MS / portTICK_PERIOD_MS);
   }
 }
@@ -121,53 +122,73 @@ void setup()
   pinMode(FILL_SW, INPUT);
   pinMode(IGN_SW, INPUT);
 
-  xTaskCreateUniversal(comTask, "comTask", 8192, NULL, 1, &comTaskHandle, PRO_CPU_NUM);
+  /**ack返答用パラメータの初期化*/
+  ackRecieveClass::isAckRecieved = false;
+  /**スイッチ状態確認&送信タスクの起動*/
+  xTaskCreateUniversal(swComTask, "comTask", 8192, NULL, 1, &swComTaskHandle, PRO_CPU_NUM);
 }
 
 void loop()
 {
   while (1)
   {
-    /**PCからコマンドを受信した場合*/
-    if ((recieveDatafromRelayBRD.index == 0) && (SER_PC.available()))
+    /**PCからの受信に対する処理*/
+    if (recieve(SER_PC, PCRxBff))
     {
-      recieveDatafromRelayBRD.data[0] = SER_PC.read();
-      if (recieveDatafromRelayBRD.data[0] == 0x71)
+      uint8_t tmpCmdId = GseCom::getCmdId(PCRxBff.data);
+      if (tmpCmdId == 0x00) /**ack受信*/
       {
-        recieveDatafromRelayBRD.index++;
+        /**ackのIDの上書き*/
+        PCRxBff.data[3] |= OWNNODEID;
+        /**ack返答関係の起動*/
+        ackRecieveClass::isAckRecieved = 1;
+        ackRecieveClass::ackNodesIds = PCRxBff.data[3];
+        ackRecieveClass::ackRecieveTime = micros();
+
+        /**下位ノードへackの送信*/
+        send(SER_RELAY, PCRxBff.data);
+      }
+
+      if (tmpCmdId == 0x71) /**PCからの転送処理*/
+      {
+        send(SER_RELAY, PCRxBff.data);
       }
     }
-    if ((recieveDatafromRelayBRD.index > 0) && (SER_PC.available() > 3))
-    {
-      SER_PC.read(recieveDatafromRelayBRD.data + 1, 4);
-      SER_RELAY.write(recieveDatafromRelayBRD.data, 5);
-      recieveDatafromRelayBRD.index = 0;
-    }
 
-    /**中継基板からコマンドを受信した場合*/
-    if ((recieveDatafromPC.index == 0) && (SER_RELAY.available()))
+    /**中継基板からの受信に対する処理*/
+    if (recieve(SER_RELAY, RelayRxBff))
     {
-      recieveDatafromPC.data[0] = SER_RELAY.read();
-      if (recieveDatafromPC.data[0] == 0x71)
+      uint8_t tmpCmdId = GseCom::getCmdId(PCRxBff.data);
+      if (tmpCmdId == 0x00) /**ack受信*/
       {
-        recieveDatafromPC.index++;
+        /**ackのIDの上書き*/
+        ackRecieveClass::ackNodesIds |= PCRxBff.data[3];
+      }
+      if (tmpCmdId == 0x61) /**PCからの転送処理*/
+      {
+        send(SER_RELAY, PCRxBff.data);
       }
     }
-    if ((recieveDatafromPC.index > 0) && (SER_RELAY.available() > 3))
+
+    /**ackに関する処理*/
+    if (ackRecieveClass::isAckRecieved)
     {
-      SER_RELAY.read(recieveDatafromPC.data + 1, 4);
-      SER_PC.write(recieveDatafromPC.data, 5);
-      recieveDatafromPC.index = 0;
-      isCmd2RelayBRDSended = 0;
+      if ((micros() - ackRecieveClass::ackRecieveTime) > ACKWAITTIME)
+      {
+        /**ackを受信し，上位ノードに応答していない状態
+         * もし下位ノードから応答があった場合
+         * ackRecieveClass::ackNodesIdsが更新されているため問題なし
+         */
+        uint8_t ackPayLoad[1];
+        ackPayLoad[0] = ackRecieveClass::ackNodesIds;
+        uint8_t ackPacket[5];
+        GseCom::makePacket(ackPacket, 0x00, ackPayLoad, 1);
+
+        /**送信後処理，ackRecieveClass::isAckRecievedの解放*/
+        ackRecieveClass::isAckRecieved = false;
+      }
     }
 
-    /**中継基板から応答が帰ってこない場合*/
-    if ((isCmd2RelayBRDSended == 1) && (micros() - timeCmd2RelayBRDSended > 20000))
-    {
-      uint8_t relayErrCmdParams[8];
-      uint8_t relayErrCmd[12];
-      relayErrCmdParams[7] = 0b10;
-      makeCmd(relayErrCmd, 0x61, relayErrCmdParams, 8);
-      isCmd2RelayBRDSended = 0;
-    }
+    /**見やすくするための行*/
   }
+}
