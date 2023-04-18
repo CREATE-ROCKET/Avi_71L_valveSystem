@@ -36,13 +36,12 @@ rxBff RelayRxBff;
 /**com consts.*/
 TaskHandle_t swComTaskHandle; /**スイッチのデータ送信用の処理系*/
 
-/** コマンド関係パラメータ*/
-class ackRecieveClass
+/** ack返答用パラメータ*/
+namespace ackRecieveClass
 {
-public:
-  static bool isAckRecieved;      /**trueならpcからackを受信済み，応答したらfalseに変更*/
-  static uint32_t ackRecieveTime; /**pcからackを受け取った時刻(us)，ACKWAITTIME後までに受信がなければ*/
-  static uint8_t ackNodesIds;     /**ackのノードIDのOR*/
+  bool isAckRecieved;      /**trueならpcからackを受信済み，応答したらfalseに変更*/
+  uint32_t ackRecieveTime; /**pcからackを受け取った時刻(us)，ACKWAITTIME後までに受信がなければ*/
+  uint8_t ackNodesIds;     /**ackのノードIDのOR*/
 };
 
 /** 受信用関数，パケット受信完了したらtrueを返す*/
