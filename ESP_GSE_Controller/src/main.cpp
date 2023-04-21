@@ -79,7 +79,7 @@ IRAM_ATTR bool recieve(HardwareSerial SER, rxBff rx)
   return false;
 }
 
-IRAM_ATTR void send(HardwareSerial SER, uint8_t packet[RXPACKETBFFMAX])
+IRAM_ATTR void send(HardwareSerial SER, uint8_t *packet)
 {
   SER.write(packet, packet[2]);
 }
