@@ -1,6 +1,8 @@
 #include <Arduino.h>
+#include <stdio.h>
 #include "driver/pcnt.h"
 #include <Adafruit_NeoPixel.h>
+#include "../../communication/gseCom.hpp"
 
 #define ENC_A 34
 #define ENC_B 35
@@ -20,6 +22,11 @@
 #define ENC_CPR 64.
 
 #define CONTROLINTERVAL_MS 1
+#define LOGDATASIZE 4096
+
+#define SER_RELAY Serial1
+#define SER_RELAY_RX 36
+#define SER_RELAY_TX 25
 
 #define PIN 32
 #define NUMPIXELS 1
@@ -47,11 +54,36 @@ struct MDLogData
   double _motor_angle;
   double _d_motor_angle;
 };
-struct MDLogData MDLogDataMem[4096];
+struct MDLogData MDLogDataMem[LOGDATASIZE];
 
 TaskHandle_t controlHandle;
+bool isControlRunning = false;
 
 pcnt_config_t pcnt_config;
+
+/**ack configuration*/
+#define ACKWAITTIME 0 /**ackの待ち時間*/
+#define OWNNODEID 0b00000100
+
+/**受信バッファ configuration*/
+#define RXPACKETBFFMAX 128
+
+/**受信バッファ*/
+class rxBff
+{
+public:
+  uint8_t index = 0;
+  uint8_t data[RXPACKETBFFMAX];
+};
+rxBff RelayRxBff;
+
+/** ack返答用パラメータ*/
+namespace ackRecieveClass
+{
+  bool isAckRecieved = true; /**trueならpcからackを受信済み，応答したらfalseに変更*/
+  uint32_t ackRecieveTime;   /**pcからackを受け取った時刻(us)，ACKWAITTIME後までに受信がなければ*/
+  uint8_t ackNodesIds;       /**ackのノードIDのOR*/
+};
 
 IRAM_ATTR void controlDCM(void *parameters)
 {
@@ -111,6 +143,7 @@ IRAM_ATTR void controlDCM(void *parameters)
       pixels.show();
       MDLogMemIndex = 0;
       isMdFinished = 0;
+      isControlRunning = false;
       vTaskDelete(controlHandle);
     }
     else if (isMdFinished > 0)
@@ -152,13 +185,69 @@ IRAM_ATTR void controlDCM(void *parameters)
     }
 
     // write log data
-    MDLogDataMem[MDLogMemIndex]._enc_pcnt = enc_pcnt;
-    MDLogDataMem[MDLogMemIndex]._pwm_ratio = pwm_ratio;
-    MDLogDataMem[MDLogMemIndex]._motor_angle = motor_angle;
-    MDLogDataMem[MDLogMemIndex++]._d_motor_angle = d_motor_angle;
+    if (MDLogMemIndex < LOGDATASIZE)
+    {
+      MDLogDataMem[MDLogMemIndex]._enc_pcnt = enc_pcnt;
+      MDLogDataMem[MDLogMemIndex]._pwm_ratio = pwm_ratio;
+      MDLogDataMem[MDLogMemIndex]._motor_angle = motor_angle;
+      MDLogDataMem[MDLogMemIndex]._d_motor_angle = d_motor_angle;
+      // プリスケールしデータをシリアル通信に流すコードを追加
+      if (MDLogMemIndex % 20 == 0)
+      {
+        // シリアル通信に流す
+        uint8_t payload[30];
+        memcpy(payload, &MDLogDataMem[MDLogMemIndex]._time, sizeof(unsigned long));
+        memcpy(payload + 4, &MDLogDataMem[MDLogMemIndex]._enc_pcnt, sizeof(int16_t));
+        memcpy(payload + 6, &target_angle, sizeof(double));
+        memcpy(payload + 14, &MDLogDataMem[MDLogMemIndex]._motor_angle, sizeof(double));
+        memcpy(payload + 22, &MDLogDataMem[MDLogMemIndex]._d_motor_angle, sizeof(double));
+        uint8_t packet[34];
+        GseCom::makePacket(packet, 0x61, payload, 30);
+        SER_RELAY.write(packet, packet[2]);
+      }
+
+      // ログの配列のインデックスを加算
+      MDLogMemIndex++;
+    }
 
     vTaskDelayUntil(&xLastWakeTime, CONTROLINTERVAL_MS / portTICK_PERIOD_MS);
   }
+}
+
+/** 受信用関数，パケット受信完了したらtrueを返す*/
+IRAM_ATTR bool
+recieve(HardwareSerial &SER, rxBff &rx)
+{
+  while (SER.available())
+  {
+    uint8_t tmp = SER.read();
+
+    if (rx.index == 0) /**ヘッダ受信*/
+    {
+      if (tmp == 0x43)
+      {
+        rx.data[rx.index++] = tmp;
+      }
+    }
+    else if ((rx.index == 1) || (rx.index == 2)) /**cmdidおよびlengthの受信*/
+    {
+      rx.data[rx.index++] = tmp;
+    }
+    else if (rx.index < (rx.data[2] - 1)) /**受信完了1個前までの処理*/
+    {
+      rx.data[rx.index++] = tmp;
+    }
+    else if (rx.index == rx.data[2] - 1) /**受信完了*/
+    {
+      rx.data[rx.index] = tmp;
+      rx.index = 0;
+      if (GseCom::checkPacket(rx.data) == 0)
+      {
+        return true;
+      }
+    }
+  }
+  return false;
 }
 
 void setup()
@@ -172,7 +261,7 @@ void setup()
   pcnt_config.ctrl_gpio_num = ENC_B;
   pcnt_config.lctrl_mode = PCNT_MODE_REVERSE;
   pcnt_config.hctrl_mode = PCNT_MODE_KEEP;
-  pcnt_config.channel = PCNT_CHANNEL_0;
+  pcnt_config.channel = PCNT_CHANNEL_1;
   pcnt_config.unit = PCNT_UNIT_0;
   pcnt_config.pos_mode = PCNT_COUNT_INC;
   pcnt_config.neg_mode = PCNT_COUNT_DEC;
@@ -181,6 +270,7 @@ void setup()
   pcnt_counter_clear(PCNT_UNIT_0);
 
   Serial.begin(115200);
+  SER_RELAY.begin(115200, SERIAL_8N1, SER_RELAY_RX, SER_RELAY_TX);
   pinMode(MA_N, OUTPUT);
   pinMode(MA_P, OUTPUT);
   pinMode(MB_N, OUTPUT);
@@ -211,35 +301,60 @@ void setup()
 
 void loop()
 {
-  if (Serial.available())
+  if (recieve(SER_RELAY, RelayRxBff))
   {
-    char chr = Serial.read();
-    if (chr == 'a')
+    Serial.println("cmd rec");
+    uint8_t tmpCmdId = GseCom::getCmdId(RelayRxBff.data);
+    if (tmpCmdId == 0x00) /**ack受信*/
     {
-      pixels.setPixelColor(0, pixels.Color(12, 8, 0));
-      pixels.show();
-      target_angle = 90. / 360. * M_PI;
-      // Nch idle
-      digitalWrite(MA_N, LOW);
-      digitalWrite(MB_N, LOW);
-      delay(1);
-      xTaskCreate(controlDCM, "DCM", 8192, NULL, 1, &controlHandle);
+      Serial.println("ack");
+      /**ackのIDの上書き*/
+      RelayRxBff.data[3] |= OWNNODEID;
+      /**CRCの再生成*/
+      GseCom::regenPacketCRC(RelayRxBff.data);
+      /**ack返答関係の起動*/
+      ackRecieveClass::isAckRecieved = 1;
+      ackRecieveClass::ackNodesIds = RelayRxBff.data[3];
+      ackRecieveClass::ackRecieveTime = micros();
+
+      /**上位ノードへackの返信*/
+      SER_RELAY.write(RelayRxBff.data, RelayRxBff.data[2]);
     }
-    if (chr == 's')
+    if (tmpCmdId == 0x71) /**バルブ制御コマンド*/
     {
-      pixels.setPixelColor(0, pixels.Color(12, 8, 0));
-      pixels.show();
-      target_angle = 0.;
-      // Nch idle
-      digitalWrite(MA_N, LOW);
-      digitalWrite(MB_N, LOW);
-      delay(1);
-      xTaskCreate(controlDCM, "DCM", 8192, NULL, 1, &controlHandle);
+      Serial.println("valve");
+      uint8_t valveTarget = RelayRxBff.data[3];
+      if (valveTarget == 0x01)
+      {
+        pixels.setPixelColor(0, pixels.Color(12, 8, 0));
+        pixels.show();
+        target_angle = 90. / 360. * M_PI;
+        // Nch idle
+        digitalWrite(MA_N, LOW);
+        digitalWrite(MB_N, LOW);
+        delay(1);
+        if (!isControlRunning)
+        {
+          isControlRunning = true;
+          xTaskCreate(controlDCM, "DCM", 8192, NULL, 1, &controlHandle);
+        }
+      }
+      else if (valveTarget == 0x00)
+      {
+        pixels.setPixelColor(0, pixels.Color(12, 8, 0));
+        pixels.show();
+        target_angle = 0. / 360. * M_PI;
+        // Nch idle
+        digitalWrite(MA_N, LOW);
+        digitalWrite(MB_N, LOW);
+        delay(1);
+        if (!isControlRunning)
+        {
+          isControlRunning = true;
+          xTaskCreate(controlDCM, "DCM", 8192, NULL, 1, &controlHandle);
+        }
+      }
     }
+    /**その他コマンドはここへ*/
   }
-  // Serial.print("u\n");
-  int16_t enc_pcnt;
-  pcnt_get_counter_value(PCNT_UNIT_0, &enc_pcnt);
-  // Serial.printf("%d,,,\n", enc_pcnt);
-  delay(1000);
 }
