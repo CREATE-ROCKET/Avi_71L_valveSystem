@@ -208,7 +208,7 @@ void loop()
     char chr = Serial.read();
     if (chr == 'a')
     {
-      target_angle = 45. / 180. * M_PI;
+      target_angle = 90. / 360. * M_PI;
       // Nch idle
       digitalWrite(MA_N, LOW);
       digitalWrite(MB_N, LOW);
