@@ -1,5 +1,6 @@
 #include <Arduino.h>
 #include "driver/pcnt.h"
+#include <Adafruit_NeoPixel.h>
 
 #define ENC_A 34
 #define ENC_B 35
@@ -19,6 +20,10 @@
 #define ENC_CPR 64.
 
 #define CONTROLINTERVAL_MS 1
+
+#define PIN 32
+#define NUMPIXELS 1
+Adafruit_NeoPixel pixels(NUMPIXELS, PIN, NEO_GRB + NEO_KHZ800);
 
 double motor_angle = 0., old_motor_angle = 0., d_motor_angle = 0.; // 角度, 一つ前の時刻の角度, 角速度
 const double dt = 0.001;                                           // サンプリング間隔
@@ -109,7 +114,8 @@ IRAM_ATTR void controlDCM(void *parameters)
       }
       MDLogMemIndex = 0;
       isMdFinished = 0;
-
+      pixels.setPixelColor(0, pixels.Color(00, 20, 0));
+      pixels.show();
       vTaskDelete(controlHandle);
     }
     else if (isMdFinished > 0)
@@ -162,6 +168,10 @@ IRAM_ATTR void controlDCM(void *parameters)
 
 void setup()
 {
+  pixels.begin();
+  pixels.clear();
+  pixels.setPixelColor(0, pixels.Color(20, 0, 0));
+  pixels.show();
   // pcnt init
   pcnt_config.pulse_gpio_num = ENC_A;
   pcnt_config.ctrl_gpio_num = ENC_B;
@@ -198,6 +208,9 @@ void setup()
   // pcnt on
   pcnt_counter_resume(PCNT_UNIT_0);
 
+  pixels.setPixelColor(0, pixels.Color(0, 20, 0));
+  pixels.show();
+
   delay(1000);
 }
 
@@ -208,6 +221,8 @@ void loop()
     char chr = Serial.read();
     if (chr == 'a')
     {
+      pixels.setPixelColor(0, pixels.Color(12, 8, 0));
+      pixels.show();
       target_angle = 90. / 360. * M_PI;
       // Nch idle
       digitalWrite(MA_N, LOW);
@@ -217,6 +232,8 @@ void loop()
     }
     if (chr == 's')
     {
+      pixels.setPixelColor(0, pixels.Color(12, 8, 0));
+      pixels.show();
       target_angle = 0.;
       // Nch idle
       digitalWrite(MA_N, LOW);
