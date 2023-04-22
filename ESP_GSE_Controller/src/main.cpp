@@ -8,8 +8,8 @@
 #define IGN_SW 2
 
 /**serial configuration*/
-#define SER_PC Serial0
-#define SER_RELAY Serial1
+#define SER_PC Serial
+#define SER_RELAY Serial0
 #define SER_RELAY_TX 21
 #define SER_RELAY_RX 20
 
@@ -45,7 +45,7 @@ namespace ackRecieveClass
 };
 
 /** 受信用関数，パケット受信完了したらtrueを返す*/
-IRAM_ATTR bool recieve(HardwareSerial SER, rxBff rx)
+IRAM_ATTR bool recieveHDS(HardwareSerial &SER, rxBff &rx)
 {
   while (SER.available())
   {
@@ -79,9 +79,38 @@ IRAM_ATTR bool recieve(HardwareSerial SER, rxBff rx)
   return false;
 }
 
-IRAM_ATTR void send(HardwareSerial SER, uint8_t *packet)
+IRAM_ATTR bool recieveHWCDC(HWCDC &SER, rxBff &rx)
 {
-  SER.write(packet, packet[2]);
+  while (SER.available())
+  {
+    uint8_t tmp = SER.read();
+
+    if (rx.index == 0) /**ヘッダ受信*/
+    {
+      if (tmp == 0x43)
+      {
+        rx.data[rx.index++] = tmp;
+      }
+    }
+    else if ((rx.index == 1) || (rx.index == 2)) /**cmdidおよびlengthの受信*/
+    {
+      rx.data[rx.index++] = tmp;
+    }
+    else if (rx.index < (rx.data[2] - 1)) /**受信完了1個前までの処理*/
+    {
+      rx.data[rx.index++] = tmp;
+    }
+    else if (rx.index == rx.data[2] - 1) /**受信完了*/
+    {
+      rx.data[rx.index] = tmp;
+      rx.index = 0;
+      if (GseCom::checkPacket(rx.data) == 0)
+      {
+        return true;
+      }
+    }
+  }
+  return false;
 }
 
 /** 中継基板に対し通信を発行するスレッド*/
@@ -103,7 +132,7 @@ IRAM_ATTR void swComTask(void *parameters)
     /**パラメータからパケットの生成*/
     uint8_t swPacket[5];
     GseCom::makePacket(swPacket, 0x21, swPayload, 1);
-    send(SER_RELAY, swPacket);
+    SER_RELAY.write(swPacket, swPacket[2]);
 
     vTaskDelayUntil(&xLastWakeTime, TASKINTERVAL_MS / portTICK_PERIOD_MS);
   }
@@ -129,65 +158,61 @@ void setup()
 
 void loop()
 {
-  while (1)
+  /**PCからの受信に対する処理*/
+  if (recieveHWCDC(SER_PC, PCRxBff))
   {
-    /**PCからの受信に対する処理*/
-    if (recieve(SER_PC, PCRxBff))
+    uint8_t tmpCmdId = GseCom::getCmdId(PCRxBff.data);
+    if (tmpCmdId == 0x00) /**ack受信*/
     {
-      uint8_t tmpCmdId = GseCom::getCmdId(PCRxBff.data);
-      if (tmpCmdId == 0x00) /**ack受信*/
-      {
-        /**ackのIDの上書き*/
-        PCRxBff.data[3] |= OWNNODEID;
-        /**ack返答関係の起動*/
-        ackRecieveClass::isAckRecieved = 1;
-        ackRecieveClass::ackNodesIds = PCRxBff.data[3];
-        ackRecieveClass::ackRecieveTime = micros();
+      /**ackのIDの上書き*/
+      PCRxBff.data[3] |= OWNNODEID;
+      /**ack返答関係の起動*/
+      ackRecieveClass::isAckRecieved = true;
+      ackRecieveClass::ackNodesIds = PCRxBff.data[3];
+      ackRecieveClass::ackRecieveTime = micros();
 
-        /**下位ノードへackの送信*/
-        send(SER_RELAY, PCRxBff.data);
-      }
-
-      if (tmpCmdId == 0x71) /**PCからの転送処理*/
-      {
-        send(SER_RELAY, PCRxBff.data);
-      }
+      /**下位ノードへackの送信*/
+      SER_RELAY.write(PCRxBff.data, PCRxBff.data[2]);
     }
 
-    /**中継基板からの受信に対する処理*/
-    if (recieve(SER_RELAY, RelayRxBff))
+    if (tmpCmdId == 0x71) /**PCからの転送処理*/
     {
-      uint8_t tmpCmdId = GseCom::getCmdId(PCRxBff.data);
-      if (tmpCmdId == 0x00) /**ack受信*/
-      {
-        /**ackのIDの上書き*/
-        ackRecieveClass::ackNodesIds |= PCRxBff.data[3];
-      }
-      if (tmpCmdId == 0x61) /**PCからの転送処理*/
-      {
-        send(SER_RELAY, PCRxBff.data);
-      }
+      SER_RELAY.write(PCRxBff.data, PCRxBff.data[2]);
     }
+  }
 
-    /**ackに関する処理*/
-    if (ackRecieveClass::isAckRecieved)
+  /**中継基板からの受信に対する処理*/
+  if (recieveHDS(SER_RELAY, RelayRxBff))
+  {
+    uint8_t tmpCmdId = GseCom::getCmdId(RelayRxBff.data);
+    if (tmpCmdId == 0x00) /**ack受信*/
     {
-      if ((micros() - ackRecieveClass::ackRecieveTime) > ACKWAITTIME)
-      {
-        /**ackを受信し，上位ノードに応答していない状態
-         * もし下位ノードから応答があった場合
-         * ackRecieveClass::ackNodesIdsが更新されているため問題なし
-         */
-        uint8_t ackPayLoad[1];
-        ackPayLoad[0] = ackRecieveClass::ackNodesIds;
-        uint8_t ackPacket[5];
-        GseCom::makePacket(ackPacket, 0x00, ackPayLoad, 1);
-
-        /**送信後処理，ackRecieveClass::isAckRecievedの解放*/
-        ackRecieveClass::isAckRecieved = false;
-      }
+      /**ackのIDの上書き*/
+      ackRecieveClass::ackNodesIds |= RelayRxBff.data[3];
     }
+    if (tmpCmdId == 0x61) /**PCからの転送処理*/
+    {
+      SER_PC.write(RelayRxBff.data, RelayRxBff.data[2]);
+    }
+  }
 
-    /**見やすくするための行*/
+  /**ackに関する処理*/
+  if (ackRecieveClass::isAckRecieved)
+  {
+    if ((micros() - ackRecieveClass::ackRecieveTime) > ACKWAITTIME)
+    {
+      /**ackを受信し，上位ノードに応答していない状態
+       * もし下位ノードから応答があった場合
+       * ackRecieveClass::ackNodesIdsが更新されているため問題なし
+       */
+      uint8_t ackPayLoad[1];
+      ackPayLoad[0] = ackRecieveClass::ackNodesIds;
+      uint8_t ackPacket[5];
+      GseCom::makePacket(ackPacket, 0x00, ackPayLoad, 1);
+      SER_PC.write(ackPacket, ackPacket[2]);
+
+      /**送信後処理，ackRecieveClass::isAckRecievedの解放*/
+      ackRecieveClass::isAckRecieved = false;
+    }
   }
 }
