@@ -31,6 +31,11 @@ public:
         packet[payloadLength + 3] = CRC8::calculate(payload, payloadLength);
     }
 
+    static void regenPacketCRC(uint8_t *packet)
+    {
+        packet[packet[2] - 1] = CRC8::calculate(packet + 3, packet[2] - 4);
+    }
+
     static uint8_t checkPacket(uint8_t *packet)
     {
         if (packet[GSECOM_MAP_HEAD] != GSECOM_HEADER)
