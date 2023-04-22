@@ -23,7 +23,7 @@
 #define TASKINTERVAL_MS 10
 
 /**ack configuration*/
-#define ACKWAITTIME 5 /**ackの待ち時間*/
+#define ACKWAITTIME 10 /**ackの待ち時間*/
 #define OWNNODEID 0b00000010
 
 /**受信バッファ configuration*/
@@ -112,6 +112,7 @@ void setup()
   pinMode(SER_CON_RX, INPUT);
   SER_VALVE.begin(115200, SERIAL_8N1, SER_VALVE_RX, SER_VALVE_TX);
   SER_CON.begin(115200, SERIAL_8N1, SER_CON_RX, SER_CON_TX);
+  SER_SEP.begin(115200, SERIAL_8N1, SER_SEP_RX, SER_SEP_TX);
 
   /**ack返答用パラメータの初期化*/
   ackRecieveClass::isAckRecieved = false;
@@ -141,13 +142,15 @@ void loop()
         SER_SEP.write(ConRxBff.data, ConRxBff.data[2]);
       }
 
-      if (tmpCmdId == 0x43) /**スイッチ状態受信*/
+      if (tmpCmdId == 0x21) /**スイッチ状態受信*/
       {
         uint8_t payload = ConRxBff.data[3];
-        digitalWrite(EXT_D_FET, (payload & 0b10000000));
-        digitalWrite(INT_D_FET, (payload & 0b01000000));
-        digitalWrite(FILL_FET, (payload & 0b00100000));
-        if (payload & 0b00010000) /**点火スイッチオン*/
+        digitalWrite(EXT_D_FET, (payload & 0b10000000) >> 7);
+        digitalWrite(INT_D_FET, (payload & 0b01000000) >> 6);
+        digitalWrite(FILL_FET, (payload & 0b00100000) >> 5);
+        digitalWrite(O2_FET, (payload & 0b00010000) >> 4);
+        digitalWrite(IGN_FET, (payload & 0b00010000) >> 4);
+        if ((payload & 0b00010000) >> 4) /**点火スイッチオン*/
         {
           if (!ignitionControlClass::isFireing)
           {
@@ -203,7 +206,7 @@ void loop()
     /**ackに関する処理*/
     if (ackRecieveClass::isAckRecieved)
     {
-      if ((micros() - ackRecieveClass::ackRecieveTime) > ACKWAITTIME)
+      if ((micros() - ackRecieveClass::ackRecieveTime) > ACKWAITTIME * 1000)
       {
         /**ackを受信し，上位ノードに応答していない状態
          * もし下位ノードから応答があった場合

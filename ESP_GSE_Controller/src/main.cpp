@@ -14,10 +14,10 @@
 #define SER_RELAY_RX 20
 
 /**swComTask configuration*/
-#define TASKINTERVAL_MS 10
+#define TASKINTERVAL_MS 20
 
 /**ack configuration*/
-#define ACKWAITTIME 10 /**ackの待ち時間*/
+#define ACKWAITTIME 20 /**ackの待ち時間*/
 #define OWNNODEID 0b00000001
 
 /**受信バッファ configuration*/
@@ -127,7 +127,7 @@ IRAM_ATTR void swComTask(void *parameters)
 
     /**パラメータの生成*/
     uint8_t swPayload[1];
-    swPayload[0] = (extdstatus << 7) | (intdstatus << 6) | (fillstatus << 5) | (ignstatus);
+    swPayload[0] = (extdstatus << 7) | (intdstatus << 6) | (fillstatus << 5) | (ignstatus << 4);
 
     /**パラメータからパケットの生成*/
     uint8_t swPacket[5];
@@ -201,7 +201,7 @@ void loop()
   /**ackに関する処理*/
   if (ackRecieveClass::isAckRecieved)
   {
-    if ((micros() - ackRecieveClass::ackRecieveTime) > ACKWAITTIME)
+    if ((micros() - ackRecieveClass::ackRecieveTime) > ACKWAITTIME * 1000)
     {
       /**ackを受信し，上位ノードに応答していない状態
        * もし下位ノードから応答があった場合
