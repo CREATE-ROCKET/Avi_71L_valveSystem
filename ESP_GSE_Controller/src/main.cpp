@@ -166,6 +166,8 @@ void loop()
     {
       /**ackのIDの上書き*/
       PCRxBff.data[3] |= OWNNODEID;
+      /**CRCの再生成*/
+      GseCom::regenPacketCRC(PCRxBff.data);
       /**ack返答関係の起動*/
       ackRecieveClass::isAckRecieved = true;
       ackRecieveClass::ackNodesIds = PCRxBff.data[3];

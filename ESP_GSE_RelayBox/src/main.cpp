@@ -129,6 +129,8 @@ void loop()
       {
         /**ackのIDの上書き*/
         ConRxBff.data[3] |= OWNNODEID;
+        /**CRCの再生成*/
+        GseCom::regenPacketCRC(ConRxBff.data);
         /**ack返答関係の起動*/
         ackRecieveClass::isAckRecieved = 1;
         ackRecieveClass::ackNodesIds = ConRxBff.data[3];
