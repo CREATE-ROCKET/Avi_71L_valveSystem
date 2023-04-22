@@ -107,15 +107,10 @@ IRAM_ATTR void controlDCM(void *parameters)
     // モーター制御が終了していた場合255回モーターのコントローラーをスキップし、タスクを終了
     if (isMdFinished == 255)
     {
-      Serial.println("time,enc_pcnt,pwm_ratio,motor_angle,d_motor_angle");
-      for (int i = 0; i < MDLogMemIndex; i++)
-      {
-        Serial.printf("%d,%d,%d,%f5.5,%f5.5\n", MDLogDataMem[i]._time, MDLogDataMem[i]._enc_pcnt, MDLogDataMem[i]._pwm_ratio, MDLogDataMem[i]._motor_angle, MDLogDataMem[i]._d_motor_angle);
-      }
-      MDLogMemIndex = 0;
-      isMdFinished = 0;
       pixels.setPixelColor(0, pixels.Color(00, 20, 0));
       pixels.show();
+      MDLogMemIndex = 0;
+      isMdFinished = 0;
       vTaskDelete(controlHandle);
     }
     else if (isMdFinished > 0)
