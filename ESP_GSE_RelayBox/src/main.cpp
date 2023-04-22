@@ -55,7 +55,7 @@ namespace ignitionControlClass
 
 /** 受信用関数，パケット受信完了したらtrueを返す*/
 IRAM_ATTR bool
-recieve(HardwareSerial SER, rxBff rx)
+recieve(HardwareSerial &SER, rxBff &rx)
 {
   while (SER.available())
   {
@@ -87,11 +87,6 @@ recieve(HardwareSerial SER, rxBff rx)
     }
   }
   return false;
-}
-
-IRAM_ATTR void send(HardwareSerial SER, uint8_t packet[RXPACKETBFFMAX])
-{
-  SER.write(packet, packet[2]);
 }
 
 void setup()
@@ -140,8 +135,8 @@ void loop()
         ackRecieveClass::ackRecieveTime = micros();
 
         /**下位ノードへackの送信*/
-        send(SER_VALVE, ConRxBff.data);
-        send(SER_SEP, ConRxBff.data);
+        SER_VALVE.write(ConRxBff.data, ConRxBff.data[2]);
+        SER_SEP.write(ConRxBff.data, ConRxBff.data[2]);
       }
 
       if (tmpCmdId == 0x43) /**スイッチ状態受信*/
@@ -155,7 +150,7 @@ void loop()
           if (!ignitionControlClass::isFireing)
           {
             ignitionControlClass::isFireing = true;
-            /**点火コマンド送信~~~~~~~~~~~~~~~~~~~~~~~~~~
+            /**点火コマンド送信~~~~~~~~~~~~~~~~~~~~~~~~~~　あとでかけ～～～～～～～～～～～～～～～～～
              * 書け
              */
           }
@@ -166,10 +161,10 @@ void loop()
         }
       }
 
-      if (tmpCmdId == 0x71) /**Relayからの転送処理*/
+      if (tmpCmdId == 0x71) /**CONTROLLERからの転送処理*/
       {
-        send(SER_VALVE, ConRxBff.data);
-        send(SER_SEP, ConRxBff.data);
+        SER_VALVE.write(ConRxBff.data, ConRxBff.data[2]);
+        SER_SEP.write(ConRxBff.data, ConRxBff.data[2]);
       }
     }
 
@@ -182,9 +177,9 @@ void loop()
         /**ackのIDの上書き*/
         ackRecieveClass::ackNodesIds |= ValveRxBff.data[3];
       }
-      if (tmpCmdId == 0x61) /**中継からの転送処理*/
+      if (tmpCmdId == 0x61) /**バルブからの転送処理 コマンドid一覧を追加すること*/
       {
-        send(SER_VALVE, ValveRxBff.data);
+        SER_CON.write(ValveRxBff.data, ValveRxBff.data[2]);
       }
     }
 
@@ -197,9 +192,9 @@ void loop()
         /**ackのIDの上書き*/
         ackRecieveClass::ackNodesIds |= SepRxBff.data[3];
       }
-      if (tmpCmdId == 0x61) /**中継からの転送処理*/
+      if (tmpCmdId == 0x61) /**中継からの転送処理 コマンドid一覧を追加すること*/
       {
-        send(SER_SEP, SepRxBff.data);
+        SER_CON.write(SepRxBff.data, SepRxBff.data[2]);
       }
     }
 
@@ -216,6 +211,7 @@ void loop()
         ackPayLoad[0] = ackRecieveClass::ackNodesIds;
         uint8_t ackPacket[5];
         GseCom::makePacket(ackPacket, 0x00, ackPayLoad, 1);
+        SER_CON.write(ackPacket, ackPacket[2]);
 
         /**送信後処理，ackRecieveClass::isAckRecievedの解放*/
         ackRecieveClass::isAckRecieved = false;
