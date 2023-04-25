@@ -192,7 +192,7 @@ IRAM_ATTR void controlDCM(void *parameters)
       MDLogDataMem[MDLogMemIndex]._motor_angle = motor_angle;
       MDLogDataMem[MDLogMemIndex]._d_motor_angle = d_motor_angle;
       // プリスケールしデータをシリアル通信に流すコードを追加
-      if (MDLogMemIndex % 20 == 0)
+      if (MDLogMemIndex % 100 == 0)
       {
         // シリアル通信に流す
         uint8_t payload[30];
@@ -265,12 +265,13 @@ void setup()
   pcnt_config.unit = PCNT_UNIT_0;
   pcnt_config.pos_mode = PCNT_COUNT_INC;
   pcnt_config.neg_mode = PCNT_COUNT_DEC;
+  pcnt_set_filter_value(PCNT_UNIT_0,1000);
   pcnt_unit_config(&pcnt_config);
   pcnt_counter_pause(PCNT_UNIT_0);
   pcnt_counter_clear(PCNT_UNIT_0);
 
   Serial.begin(115200);
-  SER_RELAY.begin(115200, SERIAL_8N1, SER_RELAY_RX, SER_RELAY_TX);
+  SER_RELAY.begin(9600, SERIAL_8N1, SER_RELAY_RX, SER_RELAY_TX);
   pinMode(MA_N, OUTPUT);
   pinMode(MA_P, OUTPUT);
   pinMode(MB_N, OUTPUT);

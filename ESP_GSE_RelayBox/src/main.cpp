@@ -23,7 +23,7 @@
 #define TASKINTERVAL_MS 10
 
 /**ack configuration*/
-#define ACKWAITTIME 10 /**ackの待ち時間*/
+#define ACKWAITTIME 100 /**ackの待ち時間*/
 #define OWNNODEID 0b00000010
 
 /**受信バッファ configuration*/
@@ -110,9 +110,9 @@ void setup()
   pinMode(SER_CON_RX, INPUT);
   pinMode(SER_CON_TX, OUTPUT);
   pinMode(SER_CON_RX, INPUT);
-  SER_VALVE.begin(115200, SERIAL_8N1, SER_VALVE_RX, SER_VALVE_TX);
-  SER_CON.begin(115200, SERIAL_8N1, SER_CON_RX, SER_CON_TX);
-  SER_SEP.begin(115200, SERIAL_8N1, SER_SEP_RX, SER_SEP_TX);
+  SER_VALVE.begin(9600, SERIAL_8N1, SER_VALVE_RX, SER_VALVE_TX);
+  SER_CON.begin(9600, SERIAL_8N1, SER_CON_RX, SER_CON_TX);
+  SER_SEP.begin(9600, SERIAL_8N1, SER_SEP_RX, SER_SEP_TX);
 
   /**ack返答用パラメータの初期化*/
   ackRecieveClass::isAckRecieved = false;

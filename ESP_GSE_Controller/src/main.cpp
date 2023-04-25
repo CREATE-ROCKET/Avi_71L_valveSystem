@@ -14,10 +14,10 @@
 #define SER_RELAY_RX 20
 
 /**swComTask configuration*/
-#define TASKINTERVAL_MS 20
+#define TASKINTERVAL_MS 100
 
 /**ack configuration*/
-#define ACKWAITTIME 20 /**ackの待ち時間*/
+#define ACKWAITTIME 200 /**ackの待ち時間*/
 #define OWNNODEID 0b00000001
 
 /**受信バッファ configuration*/
@@ -141,8 +141,8 @@ IRAM_ATTR void swComTask(void *parameters)
 void setup()
 {
   /**serial init*/
-  SER_PC.begin(115200);
-  SER_RELAY.begin(115200, SERIAL_8N1, SER_RELAY_RX, SER_RELAY_TX);
+  SER_PC.begin(9600);
+  SER_RELAY.begin(9600, SERIAL_8N1, SER_RELAY_RX, SER_RELAY_TX);
 
   /**pin init*/
   pinMode(EXT_D_SW, INPUT);
