@@ -35,10 +35,11 @@ PC以外ではackを受信した場合、
  - 下位ノードが存在しない場合、自ノードのIDをparametersにOR演算し、上位のノードに送信
 
 所定の待ち時間は以下の通り
- - `コントローラ基板`...`4ms`
- - `中継基板`...`2ms`
+ - `コントローラ基板`...`200ms`
+ - `中継基板`...`100ms`
 
- 根拠...1000ms / 115200 bps * 8 bits * 5 bytes * 2 = 0.694 ms
+ 根拠...1000ms / 115200 bps * 8 bits * 5 bytes * 2 = 8.328 ms
+ 根拠とは...?
 
 ## 2. スイッチ状態転送コマンド
 | head(1byte) | command(1byte) | length(1byte)    | parameters(1byte) | CRC(1byte)    |
