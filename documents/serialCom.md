@@ -19,7 +19,7 @@ ackに使用される各ノードのIDは以下である。ackの帰り値の条
  - `拡張1（バルブ基板）`...`0b00000100`
  - `拡張2（切り離し基板）`...`0b00001000`
 
- ![](figures/communication_nodes.drawio.png)
+ <img src="figures/communication_nodes.drawio.png" width="300">
 
 # コマンド詳細
 
