@@ -59,6 +59,9 @@ struct MDLogData MDLogDataMem[LOGDATASIZE];
 TaskHandle_t controlHandle;
 bool isControlRunning = false;
 
+unsigned long recentControlTime;
+bool isControlForbiddenByTime = false;
+
 pcnt_config_t pcnt_config;
 
 /**ack configuration*/
@@ -265,7 +268,7 @@ void setup()
   pcnt_config.unit = PCNT_UNIT_0;
   pcnt_config.pos_mode = PCNT_COUNT_INC;
   pcnt_config.neg_mode = PCNT_COUNT_DEC;
-  pcnt_set_filter_value(PCNT_UNIT_0,1000);
+  pcnt_set_filter_value(PCNT_UNIT_0, 1000);
   pcnt_unit_config(&pcnt_config);
   pcnt_counter_pause(PCNT_UNIT_0);
   pcnt_counter_clear(PCNT_UNIT_0);
@@ -336,8 +339,13 @@ void loop()
         delay(1);
         if (!isControlRunning)
         {
-          isControlRunning = true;
-          xTaskCreate(controlDCM, "DCM", 8192, NULL, 1, &controlHandle);
+          if (!isControlForbiddenByTime)
+          {
+            isControlRunning = true;
+            xTaskCreate(controlDCM, "DCM", 8192, NULL, 1, &controlHandle);
+            isControlForbiddenByTime = true;
+            recentControlTime = micros();
+          }
         }
       }
       else if (valveTarget == 0x00)
@@ -351,11 +359,23 @@ void loop()
         delay(1);
         if (!isControlRunning)
         {
-          isControlRunning = true;
-          xTaskCreate(controlDCM, "DCM", 8192, NULL, 1, &controlHandle);
+          if (!isControlForbiddenByTime)
+          {
+            isControlRunning = true;
+            xTaskCreate(controlDCM, "DCM", 8192, NULL, 1, &controlHandle);
+            isControlForbiddenByTime = true;
+            recentControlTime = micros();
+          }
         }
       }
     }
     /**その他コマンドはここへ*/
+  }
+  if (isControlForbiddenByTime)
+  {
+    if (micros() - recentControlTime > 2000000)
+    {
+      isControlForbiddenByTime = false;
+    }
   }
 }
