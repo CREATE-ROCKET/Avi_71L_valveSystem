@@ -13,6 +13,7 @@
 #define MB_N 23
 #define MB_P 22
 #define MB_P_PWM_CH 2
+
 #define PWMFREQ 5000
 #define PWM_RES_BIT 10
 
@@ -25,12 +26,12 @@
 #define LOGDATASIZE 4096
 
 #define SER_RELAY Serial1
-#define SER_RELAY_RX 36
-#define SER_RELAY_TX 25
+#define SER_RELAY_RX 26
+#define SER_RELAY_TX 27
 
-#define PIN 32
+#define SIG_OUT_INDICATOR 32
 #define NUMPIXELS 1
-Adafruit_NeoPixel pixels(NUMPIXELS, PIN, NEO_GRB + NEO_KHZ800);
+Adafruit_NeoPixel pixels(NUMPIXELS, SIG_OUT_INDICATOR, NEO_GRB + NEO_KHZ800);
 
 double motor_angle = 0., old_motor_angle = 0., d_motor_angle = 0.; // 角度, 一つ前の時刻の角度, 角速度
 const double dt = 0.001;                                           // サンプリング間隔

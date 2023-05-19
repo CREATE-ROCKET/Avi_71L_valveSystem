@@ -2,22 +2,36 @@
 #include "../../communication/gseCom.hpp"
 
 /**pin configuration*/
-#define EXT_D_FET 19
-#define INT_D_FET 21
-#define FILL_FET 18
-#define O2_FET 17
+#define SIG_OUT_INDICATOR 5
+#define SIG_IN_BAT 34
+#define SIG_IN_POW 35
+#define SIG_OUT_RELAY 4
 #define IGN_FET 16
+
+/**allocatable pins configuration*/
+#define S6 17
+#define S5 18
+#define S4 19
+#define S3 21
+#define S2 22
+#define S1 23
+
+/**pins allocatoion*/
+#define EXT_D_FET S1
+#define INT_D_FET S2
+#define FILL_FET S3
+#define O2_FET S4
 
 /**serial configuration*/
 #define SER_CON Serial1
-#define SER_CON_TX 27
-#define SER_CON_RX 13
+#define SER_CON_TX 13
+#define SER_CON_RX 27
 #define SER_VALVE Serial2
 #define SER_VALVE_TX 26
 #define SER_VALVE_RX 25
 #define SER_SEP Serial
-#define SER_SEP_TX 32
-#define SER_SEP_RX 33
+#define SER_SEP_TX 33
+#define SER_SEP_RX 32
 
 /**comTask configuration*/
 #define TASKINTERVAL_MS 10

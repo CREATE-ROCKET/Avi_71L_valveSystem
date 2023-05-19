@@ -2,18 +2,30 @@
 #include "../../communication/gseCom.hpp"
 
 /**pin configuration*/
-#define EXT_D_SW 5
-#define INT_D_SW 4
-#define FILL_SW 3
-#define IGN_SW 2
+#define SIG_OUT_INDICATOR 14
+#define SIG_OUT_GSEBATERY_LED 26
+#define SIG_OUT_GSEPOWER_LED 27
+#define SIG_IN_KEYSW 25
+
+#define SW1 16
+#define SW2 4
+#define SW3 19
+#define SW4 18
+#define SW5 17
+
+/**solenoids allocation*/
+#define EXT_D_SW SW1
+#define INT_D_SW SW2
+#define FILL_SW SW3
+#define IGN_SW SW4
 
 /**serial configuration*/
 #define SER_PC Serial1
-#define SER_PC_TX 6
-#define SER_PC_RX 7
+#define SER_PC_TX 23
+#define SER_PC_RX 22
 #define SER_RELAY Serial0
-#define SER_RELAY_TX 21
-#define SER_RELAY_RX 20
+#define SER_RELAY_TX 32
+#define SER_RELAY_RX 33
 
 /**swComTask configuration*/
 #define TASKINTERVAL_MS 100
