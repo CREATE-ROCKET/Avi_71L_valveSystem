@@ -28,10 +28,14 @@
 #define LOGDATASIZE 4096
 
 #define SER_RELAY Serial1
-#define SER_RELAY_RX 36
-#define SER_RELAY_TX 25
+#define SER_RELAY_RX 26
+#define SER_RELAY_TX 27
+// #define SER_RELAY_RX 36
+// #define SER_RELAY_TX 25
 
-#define SIG_OUT_INDICATOR 32
+#define LOGGER_OUT 33
+
+#define SIG_OUT_INDICATOR 25
 #define NUMPIXELS 1
 Adafruit_NeoPixel pixels(NUMPIXELS, SIG_OUT_INDICATOR, NEO_GRB + NEO_KHZ800);
 
@@ -166,6 +170,7 @@ IRAM_ATTR void controlDCM(void *parameters)
       MDLogMemIndex = 0;
       isMdFinished = 0;
       isControlRunning = false;
+      digitalWrite(LOGGER_OUT, HIGH);
       vTaskDelete(controlHandle);
     }
     else if (isMdFinished > 0)
@@ -242,6 +247,7 @@ IRAM_ATTR void controlDCM(void *parameters)
         MDLogMemIndex = 0;
         isMdFinished = 0;
         isControlRunning = false;
+        digitalWrite(LOGGER_OUT, HIGH);
         vTaskDelete(controlHandle);
       }
     }
@@ -347,6 +353,8 @@ void setup()
   pixels.setPixelColor(0, pixels.Color(0, 20, 0));
   pixels.show();
 
+  pinMode(LOGGER_OUT, OUTPUT);
+
   delay(1000);
 }
 
@@ -389,6 +397,7 @@ void loop()
         if (!isControlForbiddenByTime)
         {
           isControlRunning = true;
+          digitalWrite(LOGGER_OUT, LOW);
           xTaskCreate(controlDCM, "DCM", 8192, NULL, 1, &controlHandle);
           isControlForbiddenByTime = true;
           recentControlTime = micros();
