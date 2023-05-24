@@ -3,6 +3,7 @@
 #include "driver/pcnt.h"
 #include <Adafruit_NeoPixel.h>
 #include "../../communication/gseCom.hpp"
+#include "CREATELOGO.h"
 
 #define ENC_A 34
 #define ENC_B 35
@@ -26,8 +27,8 @@
 #define LOGDATASIZE 4096
 
 #define SER_RELAY Serial1
-#define SER_RELAY_RX 26
-#define SER_RELAY_TX 27
+#define SER_RELAY_RX 36
+#define SER_RELAY_TX 25
 
 #define SIG_OUT_INDICATOR 32
 #define NUMPIXELS 1
@@ -148,6 +149,7 @@ IRAM_ATTR void controlDCM(void *parameters)
       MDLogMemIndex = 0;
       isMdFinished = 0;
       isControlRunning = false;
+      Serial.printf("[%d] valve move end by control\r\n>>", micros());
       vTaskDelete(controlHandle);
     }
     else if (isMdFinished > 0)
@@ -212,6 +214,18 @@ IRAM_ATTR void controlDCM(void *parameters)
 
       // ログの配列のインデックスを加算
       MDLogMemIndex++;
+
+      // ログが規定値まで溜まったらログを終了
+      if (MDLogMemIndex == LOGDATASIZE)
+      {
+        pixels.setPixelColor(0, pixels.Color(00, 20, 0));
+        pixels.show();
+        MDLogMemIndex = 0;
+        isMdFinished = 0;
+        isControlRunning = false;
+        Serial.printf("[%d] valve move end by fill log\r\n>>", micros());
+        vTaskDelete(controlHandle);
+      }
     }
 
     vTaskDelayUntil(&xLastWakeTime, CONTROLINTERVAL_MS / portTICK_PERIOD_MS);
@@ -275,6 +289,11 @@ void setup()
   pcnt_counter_clear(PCNT_UNIT_0);
 
   Serial.begin(115200);
+
+  Serial.println();
+  Serial.print(CREATE_LOGO);
+  Serial.printf("ESP launched\r\nValve Control BRD version:230524\r\n>>", micros());
+
   SER_RELAY.begin(9600, SERIAL_8N1, SER_RELAY_RX, SER_RELAY_TX);
   pinMode(MA_N, OUTPUT);
   pinMode(MA_P, OUTPUT);
@@ -308,11 +327,11 @@ void loop()
 {
   if (recieve(SER_RELAY, RelayRxBff))
   {
-    Serial.println("cmd rec");
+    Serial.printf("[%d] relay cmd type: ", micros());
     uint8_t tmpCmdId = GseCom::getCmdId(RelayRxBff.data);
     if (tmpCmdId == 0x00) /**ack受信*/
     {
-      Serial.println("ack");
+      Serial.print("ack\r\n>>");
       /**ackのIDの上書き*/
       RelayRxBff.data[3] |= OWNNODEID;
       /**CRCの再生成*/
@@ -327,8 +346,9 @@ void loop()
     }
     if (tmpCmdId == 0x71) /**バルブ制御コマンド*/
     {
-      Serial.println("valve");
+      Serial.print("valve control\r\n>>");
       uint8_t valveTarget = RelayRxBff.data[3];
+      Serial.printf("[%d] valve move start (%d[deg] -> %d[deg])\r\n>>", micros(), (int)target_angle, valveTarget);
       if (valveTarget == 0x01)
       {
         pixels.setPixelColor(0, pixels.Color(12, 8, 0));
@@ -368,6 +388,10 @@ void loop()
             recentControlTime = micros();
           }
         }
+      }
+      else
+      {
+        Serial.print("unknown\r\n>>");
       }
     }
     /**その他コマンドはここへ*/
