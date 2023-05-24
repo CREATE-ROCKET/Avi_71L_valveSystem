@@ -4,6 +4,7 @@
 #include <Adafruit_NeoPixel.h>
 #include "../../communication/gseCom.hpp"
 #include "CREATELOGO.h"
+#include <SPIFFS.h>
 
 #define ENC_A 34
 #define ENC_B 35
@@ -56,7 +57,7 @@ struct MDLogData
   double _motor_angle;
   double _d_motor_angle;
 };
-struct MDLogData MDLogDataMem[LOGDATASIZE];
+MDLogData MDLogDataMem[LOGDATASIZE];
 
 TaskHandle_t controlHandle;
 bool isControlRunning = false;
@@ -89,6 +90,19 @@ namespace ackRecieveClass
   uint32_t ackRecieveTime;   /**pcからackを受け取った時刻(us)，ACKWAITTIME後までに受信がなければ*/
   uint8_t ackNodesIds;       /**ackのノードIDのOR*/
 };
+
+IRAM_ATTR void writeLog()
+{
+  SPIFFS.mkdir("logs");
+  char writeFileName[32] = "/logs/00001.bin";
+  File writeFp = SPIFFS.open(writeFileName, "a");
+  writeFp.print("time,enc_pcnt,pwm_ratio,angle,d_angle\r\n");
+  for (int i = 0; i < MDLogMemIndex; i++)
+  {
+    writeFp.printf("%ld,%d,%d,%e,%e\r\n", MDLogDataMem[i]._time, MDLogDataMem[i]._enc_pcnt, MDLogDataMem[i]._pwm_ratio, MDLogDataMem[i]._motor_angle, MDLogDataMem[i]._d_motor_angle);
+  }
+  writeFp.close();
+}
 
 IRAM_ATTR void controlDCM(void *parameters)
 {
@@ -146,10 +160,12 @@ IRAM_ATTR void controlDCM(void *parameters)
     {
       pixels.setPixelColor(0, pixels.Color(00, 20, 0));
       pixels.show();
+      Serial.printf("[%d] valve move end by control\r\n>>", micros());
+      // ログを記録
+      writeLog();
       MDLogMemIndex = 0;
       isMdFinished = 0;
       isControlRunning = false;
-      Serial.printf("[%d] valve move end by control\r\n>>", micros());
       vTaskDelete(controlHandle);
     }
     else if (isMdFinished > 0)
@@ -220,10 +236,12 @@ IRAM_ATTR void controlDCM(void *parameters)
       {
         pixels.setPixelColor(0, pixels.Color(00, 20, 0));
         pixels.show();
+        Serial.printf("[%d] valve move end by fill log\r\n>>", micros());
+        // ログを記録
+        writeLog();
         MDLogMemIndex = 0;
         isMdFinished = 0;
         isControlRunning = false;
-        Serial.printf("[%d] valve move end by fill log\r\n>>", micros());
         vTaskDelete(controlHandle);
       }
     }
@@ -294,6 +312,15 @@ void setup()
   Serial.print(CREATE_LOGO);
   Serial.printf("ESP launched\r\nValve Control BRD version:230524\r\n>>", micros());
 
+  if (!SPIFFS.begin(true))
+  {
+    Serial.printf("[%d] SPIFFS init fail\r\n>>", micros());
+  }
+  else
+  {
+    Serial.printf("[%d] SPIFFS total: %d [bytes], fill: %d [bytes]\r\n>>", micros(), SPIFFS.totalBytes(), SPIFFS.usedBytes());
+  }
+
   SER_RELAY.begin(9600, SERIAL_8N1, SER_RELAY_RX, SER_RELAY_TX);
   pinMode(MA_N, OUTPUT);
   pinMode(MA_P, OUTPUT);
@@ -344,7 +371,7 @@ void loop()
       /**上位ノードへackの返信*/
       SER_RELAY.write(RelayRxBff.data, RelayRxBff.data[2]);
     }
-    if (tmpCmdId == 0x71) /**バルブ制御コマンド*/
+    else if (tmpCmdId == 0x71) /**バルブ制御コマンド*/
     {
       Serial.print("valve control\r\n>>");
       uint8_t valveTarget = RelayRxBff.data[3];
@@ -387,6 +414,36 @@ void loop()
     if (micros() - recentControlTime > 2000000)
     {
       isControlForbiddenByTime = false;
+    }
+  }
+
+  // デバッガからに受信の場合
+  if (Serial.available())
+  {
+    uint8_t tmp = Serial.read();
+    if (tmp == 'r')
+    {
+      File readFp = SPIFFS.open("/logs/00001.bin");
+      uint32_t filesize = readFp.size();
+      Serial.printf("[%d] read log filesize: %d [bytes]\r\n", micros(), filesize);
+
+      for (int i = 0; i <= (filesize / 256) + 1; i++)
+      {
+        uint8_t bf[256];
+        uint16_t readsize = 256;
+        if (i == (filesize / 256))
+        {
+          readsize = filesize % 256;
+        }
+        readFp.read(bf, readsize);
+        Serial.write(bf, readsize);
+      }
+      readFp.close();
+      Serial.printf("\r\n>>[%d] read log finish\r\n>>", micros);
+    }
+    if (tmp == 'i')
+    {
+      SPIFFS.remove("/logs/00001.bin");
     }
   }
 }
