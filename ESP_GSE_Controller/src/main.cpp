@@ -23,7 +23,7 @@
 #define SER_PC Serial1
 #define SER_PC_TX 23
 #define SER_PC_RX 22
-#define SER_RELAY Serial0
+#define SER_RELAY Serial2
 #define SER_RELAY_TX 32
 #define SER_RELAY_RX 33
 
