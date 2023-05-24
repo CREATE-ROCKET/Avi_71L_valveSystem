@@ -39,10 +39,10 @@ const double dt = 0.001;                                           // サンプ�
 const double F = 200.;                                             // モータの角速度を求めるときのカットオフ周波数 [rad/s]
 int16_t pwm_ratio = 0;                                             // PWM比
 int old_pwm_ratio = 0;
-double target_angle = 45. / 180. * M_PI; // 目標角度 [rad]
-double Kp = 40., Kd = 0.9;               // コントローラのゲイン
-double MAX_V = 12.;                      // 電源電圧
-double Voltage = 0.;                     // 指令電圧
+double target_angle = 0. / 180. * M_PI; // 目標角度 [rad]
+double Kp = 40., Kd = 0.9;              // コントローラのゲイン
+double MAX_V = 12.;                     // 電源電圧
+double Voltage = 0.;                    // 指令電圧
 int16_t fric_up_border = 300, fric_down_border = 5;
 uint8_t isMdFinished = 0;
 
@@ -348,51 +348,37 @@ void loop()
     {
       Serial.print("valve control\r\n>>");
       uint8_t valveTarget = RelayRxBff.data[3];
-      Serial.printf("[%d] valve move start (%d[deg] -> %d[deg])\r\n>>", micros(), (int)target_angle, valveTarget);
-      if (valveTarget == 0x01)
+      Serial.printf("[%d] valve move start (%d[deg] -> %d[deg])\r\n>>", micros(), (int)(target_angle / M_PI * 360), valveTarget);
+
+      pixels.setPixelColor(0, pixels.Color(12, 8, 0));
+      pixels.show();
+      target_angle = (double)valveTarget / 360. * M_PI;
+      // Nch idle
+      digitalWrite(MA_N, LOW);
+      digitalWrite(MB_N, LOW);
+      delay(1);
+      if (!isControlRunning)
       {
-        pixels.setPixelColor(0, pixels.Color(12, 8, 0));
-        pixels.show();
-        target_angle = 90. / 360. * M_PI;
-        // Nch idle
-        digitalWrite(MA_N, LOW);
-        digitalWrite(MB_N, LOW);
-        delay(1);
-        if (!isControlRunning)
+        if (!isControlForbiddenByTime)
         {
-          if (!isControlForbiddenByTime)
-          {
-            isControlRunning = true;
-            xTaskCreate(controlDCM, "DCM", 8192, NULL, 1, &controlHandle);
-            isControlForbiddenByTime = true;
-            recentControlTime = micros();
-          }
+          isControlRunning = true;
+          xTaskCreate(controlDCM, "DCM", 8192, NULL, 1, &controlHandle);
+          isControlForbiddenByTime = true;
+          recentControlTime = micros();
         }
-      }
-      else if (valveTarget == 0x00)
-      {
-        pixels.setPixelColor(0, pixels.Color(12, 8, 0));
-        pixels.show();
-        target_angle = 0. / 360. * M_PI;
-        // Nch idle
-        digitalWrite(MA_N, LOW);
-        digitalWrite(MB_N, LOW);
-        delay(1);
-        if (!isControlRunning)
+        else
         {
-          if (!isControlForbiddenByTime)
-          {
-            isControlRunning = true;
-            xTaskCreate(controlDCM, "DCM", 8192, NULL, 1, &controlHandle);
-            isControlForbiddenByTime = true;
-            recentControlTime = micros();
-          }
+          Serial.printf("[%d] valve control denied: deadtime\r\n>>", micros());
         }
       }
       else
       {
-        Serial.print("unknown\r\n>>");
+        Serial.printf("[%d] valve control denied: already running\r\n>>", micros());
       }
+    }
+    else
+    {
+      Serial.print("unknown\r\n>>");
     }
     /**その他コマンドはここへ*/
   }

@@ -170,7 +170,7 @@ void loop()
           {
             ignitionControlClass::isFireing = true;
             /**点火コマンド送信 */
-            uint8_t ignPayload[1] = {0x01};
+            uint8_t ignPayload[1] = {0x5A}; // 90 deg
             uint8_t ignPacket[5];
             GseCom::makePacket(ignPacket, 0x71, ignPayload, 1);
             SER_VALVE.write(ignPacket, ignPacket[2]);
