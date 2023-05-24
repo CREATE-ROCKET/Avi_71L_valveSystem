@@ -162,6 +162,7 @@ IRAM_ATTR void controlDCM(void *parameters)
     // モーター制御が終了していた場合255回モーターのコントローラーをスキップし、タスクを終了
     if (isMdFinished == 255)
     {
+      pcnt_counter_pause(PCNT_UNIT_0);
       pixels.setPixelColor(0, pixels.Color(00, 20, 0));
       pixels.show();
       Serial.printf("[%d] valve move end by control\r\n>>", micros());
@@ -239,6 +240,7 @@ IRAM_ATTR void controlDCM(void *parameters)
       // ログが規定値まで溜まったらログを終了
       if (MDLogMemIndex == LOGDATASIZE)
       {
+        pcnt_counter_pause(PCNT_UNIT_0);
         pixels.setPixelColor(0, pixels.Color(00, 20, 0));
         pixels.show();
         Serial.printf("[%d] valve move end by fill log\r\n>>", micros());
@@ -307,7 +309,7 @@ void setup()
   pcnt_config.unit = PCNT_UNIT_0;
   pcnt_config.pos_mode = PCNT_COUNT_INC;
   pcnt_config.neg_mode = PCNT_COUNT_DEC;
-  pcnt_set_filter_value(PCNT_UNIT_0, 1000);
+  pcnt_set_filter_value(PCNT_UNIT_0, 4000);
   pcnt_unit_config(&pcnt_config);
   pcnt_counter_pause(PCNT_UNIT_0);
   pcnt_counter_clear(PCNT_UNIT_0);
@@ -346,9 +348,6 @@ void setup()
   // Nch breaking
   digitalWrite(MA_N, HIGH);
   digitalWrite(MB_N, HIGH);
-
-  // pcnt on
-  pcnt_counter_resume(PCNT_UNIT_0);
 
   pixels.setPixelColor(0, pixels.Color(0, 20, 0));
   pixels.show();
@@ -398,6 +397,7 @@ void loop()
         {
           isControlRunning = true;
           digitalWrite(LOGGER_OUT, LOW);
+          pcnt_counter_resume(PCNT_UNIT_0);
           xTaskCreate(controlDCM, "DCM", 8192, NULL, 1, &controlHandle);
           isControlForbiddenByTime = true;
           recentControlTime = micros();
