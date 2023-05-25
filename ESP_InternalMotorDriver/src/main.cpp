@@ -240,6 +240,10 @@ IRAM_ATTR void controlDCM(void *parameters)
       // ログが規定値まで溜まったらログを終了
       if (MDLogMemIndex == LOGDATASIZE)
       {
+        ledcWrite(MA_P_PWM_CH, 0);
+        ledcWrite(MB_P_PWM_CH, 0);
+        digitalWrite(MA_N, LOW);
+        digitalWrite(MB_N, LOW);
         pcnt_counter_pause(PCNT_UNIT_0);
         pixels.setPixelColor(0, pixels.Color(00, 20, 0));
         pixels.show();
