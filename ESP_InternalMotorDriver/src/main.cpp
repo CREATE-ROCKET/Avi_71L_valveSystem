@@ -475,7 +475,9 @@ void loop()
     }
     if (tmp == 'i')
     {
+      Serial.printf("[%d] start remove logfile\r\n", micros());
       SPIFFS.remove("/logs/00001.bin");
+      Serial.printf("[%d] logfile remove end usedspace: %d [bytes]\r\n", micros(), SPIFFS.usedBytes());
     }
   }
 }
