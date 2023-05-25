@@ -118,6 +118,25 @@ IRAM_ATTR void controlDCM(void *parameters)
     MDLogDataMem[MDLogMemIndex]._time = micros();
     pcnt_get_counter_value(PCNT_UNIT_0, &enc_pcnt);
 
+    if ((enc_pcnt < -100) || (1300 < enc_pcnt))
+    {
+      ledcWrite(MA_P_PWM_CH, 0);
+      ledcWrite(MB_P_PWM_CH, 0);
+      digitalWrite(MA_N, LOW);
+      digitalWrite(MB_N, LOW);
+      pcnt_counter_pause(PCNT_UNIT_0);
+      pixels.setPixelColor(0, pixels.Color(00, 20, 0));
+      pixels.show();
+      Serial.printf("[%d] valve move end by over range\r\n>>", micros());
+      // ログを記録
+      writeLog();
+      MDLogMemIndex = 0;
+      isMdFinished = 0;
+      isControlRunning = false;
+      digitalWrite(LOGGER_OUT, HIGH);
+      vTaskDelete(controlHandle);
+    }
+
     // old_motor_angleに1つ前の時刻の角度を代入
     old_motor_angle = motor_angle;
 
