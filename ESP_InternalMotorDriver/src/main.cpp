@@ -332,8 +332,8 @@ void setup()
   pcnt_config.unit = PCNT_UNIT_0;
   pcnt_config.pos_mode = PCNT_COUNT_INC;
   pcnt_config.neg_mode = PCNT_COUNT_DEC;
-  pcnt_set_filter_value(PCNT_UNIT_0, 4000);
   pcnt_unit_config(&pcnt_config);
+  pcnt_set_filter_value(PCNT_UNIT_0, 12500);
   pcnt_counter_pause(PCNT_UNIT_0);
   pcnt_counter_clear(PCNT_UNIT_0);
 
