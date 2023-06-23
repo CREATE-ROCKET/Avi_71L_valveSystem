@@ -410,6 +410,10 @@ void loop()
       pixels.setPixelColor(0, pixels.Color(12, 8, 0));
       pixels.show();
       target_angle = (double)valveTarget / 360. * M_PI;
+
+      // 点火のための待機時間
+      delay(1000);
+
       // Nch idle
       digitalWrite(MA_N, LOW);
       digitalWrite(MB_N, LOW);
