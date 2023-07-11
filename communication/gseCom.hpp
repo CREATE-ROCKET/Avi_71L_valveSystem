@@ -28,12 +28,12 @@ public:
         packet[GSECOM_MAP_CMDID] = cmdid;
         packet[GSECOM_MAP_PACKETLENGTH] = payloadLength + 4;
         memcpy(packet + GSECOM_MAP_PAYLOAD, payload, payloadLength);
-        packet[payloadLength + 3] = CRC8::calculate(payload, payloadLength);
+        packet[payloadLength + 3] = CRC8::calculate(packet, packet[GSECOM_MAP_PACKETLENGTH]-1);
     }
 
     static void regenPacketCRC(uint8_t *packet)
     {
-        packet[packet[2] - 1] = CRC8::calculate(packet + 3, packet[2] - 4);
+        packet[packet[2] - 1] = CRC8::calculate(packet, packet[GSECOM_MAP_PACKETLENGTH]-1);
     }
 
     static uint8_t checkPacket(uint8_t *packet)
@@ -42,7 +42,7 @@ public:
         {
             return GSECOM_PACKET_HEADER_ERR;
         }
-        if (CRC8::calculate(packet + GSECOM_MAP_PAYLOAD, packet[GSECOM_MAP_PACKETLENGTH] - 4) != packet[packet[GSECOM_MAP_PACKETLENGTH] - 1])
+        if (CRC8::calculate(packet, packet[GSECOM_MAP_PACKETLENGTH]-1) != packet[packet[GSECOM_MAP_PACKETLENGTH] - 1])
         {
             return GSECOM_PACKET_CRC_ERR;
         }

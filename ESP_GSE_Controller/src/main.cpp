@@ -2,22 +2,36 @@
 #include "../../communication/gseCom.hpp"
 
 /**pin configuration*/
-#define EXT_D_SW 5
-#define INT_D_SW 4
-#define FILL_SW 3
-#define IGN_SW 2
+#define SIG_OUT_INDICATOR 14
+#define SIG_OUT_GSEBATERY_LED 26
+#define SIG_OUT_GSEPOWER_LED 27
+#define SIG_IN_KEYSW 25
+
+#define SW1 16
+#define SW2 4
+#define SW3 19
+#define SW4 18
+#define SW5 17
+
+/**solenoids allocation*/
+#define EXT_D_SW SW1
+#define INT_D_SW SW2
+#define FILL_SW SW3
+#define IGN_SW SW4
 
 /**serial configuration*/
-#define SER_PC Serial
-#define SER_RELAY Serial0
-#define SER_RELAY_TX 21
-#define SER_RELAY_RX 20
+#define SER_PC Serial1
+#define SER_PC_TX 23
+#define SER_PC_RX 22
+#define SER_RELAY Serial2
+#define SER_RELAY_TX 32
+#define SER_RELAY_RX 33
 
 /**swComTask configuration*/
-#define TASKINTERVAL_MS 20
+#define TASKINTERVAL_MS 100
 
 /**ack configuration*/
-#define ACKWAITTIME 20 /**ackの待ち時間*/
+#define ACKWAITTIME 200 /**ackの待ち時間*/
 #define OWNNODEID 0b00000001
 
 /**受信バッファ configuration*/
@@ -45,41 +59,7 @@ namespace ackRecieveClass
 };
 
 /** 受信用関数，パケット受信完了したらtrueを返す*/
-IRAM_ATTR bool recieveHDS(HardwareSerial &SER, rxBff &rx)
-{
-  while (SER.available())
-  {
-    uint8_t tmp = SER.read();
-
-    if (rx.index == 0) /**ヘッダ受信*/
-    {
-      if (tmp == 0x43)
-      {
-        rx.data[rx.index++] = tmp;
-      }
-    }
-    else if ((rx.index == 1) || (rx.index == 2)) /**cmdidおよびlengthの受信*/
-    {
-      rx.data[rx.index++] = tmp;
-    }
-    else if (rx.index < (rx.data[2] - 1)) /**受信完了1個前までの処理*/
-    {
-      rx.data[rx.index++] = tmp;
-    }
-    else if (rx.index == rx.data[2] - 1) /**受信完了*/
-    {
-      rx.data[rx.index] = tmp;
-      rx.index = 0;
-      if (GseCom::checkPacket(rx.data) == 0)
-      {
-        return true;
-      }
-    }
-  }
-  return false;
-}
-
-IRAM_ATTR bool recieveHWCDC(HWCDC &SER, rxBff &rx)
+IRAM_ATTR bool recieve(HardwareSerial &SER, rxBff &rx)
 {
   while (SER.available())
   {
@@ -141,8 +121,8 @@ IRAM_ATTR void swComTask(void *parameters)
 void setup()
 {
   /**serial init*/
-  SER_PC.begin(115200);
-  SER_RELAY.begin(115200, SERIAL_8N1, SER_RELAY_RX, SER_RELAY_TX);
+  SER_PC.begin(9600, SERIAL_8N1, SER_PC_RX, SER_PC_TX);
+  SER_RELAY.begin(9600, SERIAL_8N1, SER_RELAY_RX, SER_RELAY_TX);
 
   /**pin init*/
   pinMode(EXT_D_SW, INPUT);
@@ -159,7 +139,7 @@ void setup()
 void loop()
 {
   /**PCからの受信に対する処理*/
-  if (recieveHWCDC(SER_PC, PCRxBff))
+  if (recieve(SER_PC, PCRxBff))
   {
     uint8_t tmpCmdId = GseCom::getCmdId(PCRxBff.data);
     if (tmpCmdId == 0x00) /**ack受信*/
@@ -184,7 +164,7 @@ void loop()
   }
 
   /**中継基板からの受信に対する処理*/
-  if (recieveHDS(SER_RELAY, RelayRxBff))
+  if (recieve(SER_RELAY, RelayRxBff))
   {
     uint8_t tmpCmdId = GseCom::getCmdId(RelayRxBff.data);
     if (tmpCmdId == 0x00) /**ack受信*/

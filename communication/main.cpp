@@ -23,6 +23,23 @@ int main()
     // パケットが正常か表示
     printf("packetcheck: %d\n", GseCom::checkPacket(packet));
 
+    // パケットを書き換え
+    packet[3] = 0x13;
+
+    // パケットの中身の表示
+    printf("packet:");
+    for (int i = 0; i < 20; i++)
+    {
+        printf("%x,", packet[i]);
+    }
+    printf("\n");
+
+    printf("packetcheck: %d\n", GseCom::checkPacket(packet));
+
+    GseCom::regenPacketCRC(packet);
+
+    printf("packetcheck: %d\n", GseCom::checkPacket(packet));
+
     // パケットからペイロードを抽出
     uint8_t extractPacket[20];
     uint8_t payloadLength;

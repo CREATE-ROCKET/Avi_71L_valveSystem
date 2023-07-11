@@ -2,28 +2,42 @@
 #include "../../communication/gseCom.hpp"
 
 /**pin configuration*/
-#define EXT_D_FET 19
-#define INT_D_FET 21
-#define FILL_FET 18
-#define O2_FET 17
+#define SIG_OUT_INDICATOR 5
+#define SIG_IN_BAT 34
+#define SIG_IN_POW 35
+#define SIG_OUT_RELAY 4
 #define IGN_FET 16
+
+/**allocatable pins configuration*/
+#define S6 17
+#define S5 18
+#define S4 19
+#define S3 21
+#define S2 22
+#define S1 23
+
+/**pins allocatoion*/
+#define EXT_D_FET S1
+#define INT_D_FET S2
+#define FILL_FET S3
+#define O2_FET S4
 
 /**serial configuration*/
 #define SER_CON Serial1
-#define SER_CON_TX 27
-#define SER_CON_RX 13
+#define SER_CON_TX 13
+#define SER_CON_RX 27
 #define SER_VALVE Serial2
 #define SER_VALVE_TX 26
 #define SER_VALVE_RX 25
 #define SER_SEP Serial
-#define SER_SEP_TX 32
-#define SER_SEP_RX 33
+#define SER_SEP_TX 33
+#define SER_SEP_RX 32
 
 /**comTask configuration*/
 #define TASKINTERVAL_MS 10
 
 /**ack configuration*/
-#define ACKWAITTIME 10 /**ackの待ち時間*/
+#define ACKWAITTIME 100 /**ackの待ち時間*/
 #define OWNNODEID 0b00000010
 
 /**受信バッファ configuration*/
@@ -110,9 +124,9 @@ void setup()
   pinMode(SER_CON_RX, INPUT);
   pinMode(SER_CON_TX, OUTPUT);
   pinMode(SER_CON_RX, INPUT);
-  SER_VALVE.begin(115200, SERIAL_8N1, SER_VALVE_RX, SER_VALVE_TX);
-  SER_CON.begin(115200, SERIAL_8N1, SER_CON_RX, SER_CON_TX);
-  SER_SEP.begin(115200, SERIAL_8N1, SER_SEP_RX, SER_SEP_TX);
+  SER_VALVE.begin(9600, SERIAL_8N1, SER_VALVE_RX, SER_VALVE_TX);
+  SER_CON.begin(9600, SERIAL_8N1, SER_CON_RX, SER_CON_TX);
+  SER_SEP.begin(9600, SERIAL_8N1, SER_SEP_RX, SER_SEP_TX);
 
   /**ack返答用パラメータの初期化*/
   ackRecieveClass::isAckRecieved = false;
@@ -156,7 +170,7 @@ void loop()
           {
             ignitionControlClass::isFireing = true;
             /**点火コマンド送信 */
-            uint8_t ignPayload[1] = {0x01};
+            uint8_t ignPayload[1] = {0x5A}; // 90 deg
             uint8_t ignPacket[5];
             GseCom::makePacket(ignPacket, 0x71, ignPayload, 1);
             SER_VALVE.write(ignPacket, ignPacket[2]);
