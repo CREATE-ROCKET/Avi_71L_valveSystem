@@ -412,7 +412,7 @@ void loop()
       target_angle = (double)valveTarget / 360. * M_PI;
 
       // 点火のための待機時間
-      delay(1000);
+      delay(500);
 
       // Nch idle
       digitalWrite(MA_N, LOW);
