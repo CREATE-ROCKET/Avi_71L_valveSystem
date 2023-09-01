@@ -136,11 +136,15 @@ void setup()
   pinMode(SW5, INPUT);
   pinMode(SW6, INPUT);
 
+  pinMode(LED, OUTPUT);
+
   /**ack返答用パラメータの初期化*/
   ackRecieveClass::isAckRecieved = false;
   /**スイッチ状態確認&送信タスクの起動*/
   xTaskCreateUniversal(swComTask, "comTask", 8192, NULL, 1, &swComTaskHandle, PRO_CPU_NUM);
 }
+
+int counter = 0;
 
 void loop()
 {
@@ -202,5 +206,13 @@ void loop()
       /**送信後処理，ackRecieveClass::isAckRecievedの解放*/
       ackRecieveClass::isAckRecieved = false;
     }
+  }
+
+  delay(1);
+  counter++;
+  if (counter == 1000)
+  {
+    digitalWrite(LED, !digitalRead(LED));
+    counter = 0;
   }
 }
