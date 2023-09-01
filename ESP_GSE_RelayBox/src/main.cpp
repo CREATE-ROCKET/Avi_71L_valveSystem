@@ -168,8 +168,8 @@ void loop()
         digitalWrite(FILL_FET, (payload & 0b00100000) >> 5);
         digitalWrite(O2_FET, (payload & 0b00010000) >> 4);
         digitalWrite(IGN_FET, (payload & 0b00010000) >> 4);
-        digitalWrite(S5, (payload & 0b10000000) >> 3);
-        digitalWrite(S6, (payload & 0b10000000) >> 2);
+        digitalWrite(S5, (payload & 0b00001000) >> 3);
+        digitalWrite(S6, (payload & 0b00000100) >> 2);
         if ((payload & 0b00010000) >> 4) /**点火スイッチオン*/
         {
           if (!ignitionControlClass::isFireing)
