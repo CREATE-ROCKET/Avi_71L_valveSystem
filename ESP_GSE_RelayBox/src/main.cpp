@@ -111,6 +111,8 @@ void setup()
   pinMode(FILL_FET, OUTPUT);
   pinMode(IGN_FET, OUTPUT);
   pinMode(O2_FET, OUTPUT);
+  pinMode(S5, OUTPUT);
+  pinMode(S6, OUTPUT);
 
   /**pin io init*/
   digitalWrite(EXT_D_FET, LOW);
@@ -118,6 +120,8 @@ void setup()
   digitalWrite(FILL_FET, LOW);
   digitalWrite(IGN_FET, LOW);
   digitalWrite(O2_FET, LOW);
+  digitalWrite(S5, LOW);
+  digitalWrite(S6, LOW);
 
   /**serial init*/
   pinMode(SER_VALVE_TX, OUTPUT);
@@ -164,6 +168,8 @@ void loop()
         digitalWrite(FILL_FET, (payload & 0b00100000) >> 5);
         digitalWrite(O2_FET, (payload & 0b00010000) >> 4);
         digitalWrite(IGN_FET, (payload & 0b00010000) >> 4);
+        digitalWrite(S5, (payload & 0b10000000) >> 3);
+        digitalWrite(S6, (payload & 0b10000000) >> 2);
         if ((payload & 0b00010000) >> 4) /**点火スイッチオン*/
         {
           if (!ignitionControlClass::isFireing)

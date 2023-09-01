@@ -12,6 +12,8 @@
 #define SW3 19
 #define SW4 18
 #define SW5 17
+#define SW6 13
+#define LED 15
 
 /**solenoids allocation*/
 #define EXT_D_SW SW1
@@ -104,10 +106,12 @@ IRAM_ATTR void swComTask(void *parameters)
     uint8_t intdstatus = digitalRead(INT_D_SW);
     uint8_t fillstatus = digitalRead(FILL_SW);
     uint8_t ignstatus = digitalRead(IGN_SW);
+    uint8_t sw5status = digitalRead(SW5);
+    uint8_t sw6status = digitalRead(SW6);
 
     /**パラメータの生成*/
     uint8_t swPayload[1];
-    swPayload[0] = (extdstatus << 7) | (intdstatus << 6) | (fillstatus << 5) | (ignstatus << 4);
+    swPayload[0] = (extdstatus << 7) | (intdstatus << 6) | (fillstatus << 5) | (ignstatus << 4) | (sw5status << 3) | (sw6status << 2);
 
     /**パラメータからパケットの生成*/
     uint8_t swPacket[5];
@@ -129,6 +133,8 @@ void setup()
   pinMode(INT_D_SW, INPUT);
   pinMode(FILL_SW, INPUT);
   pinMode(IGN_SW, INPUT);
+  pinMode(SW5, INPUT);
+  pinMode(SW6, INPUT);
 
   /**ack返答用パラメータの初期化*/
   ackRecieveClass::isAckRecieved = false;
