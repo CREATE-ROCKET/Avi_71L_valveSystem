@@ -36,10 +36,6 @@
 /**comTask configuration*/
 #define TASKINTERVAL_MS 10
 
-/**ack configuration*/
-#define ACKWAITTIME 100 /**ackの待ち時間*/
-#define OWNNODEID 0b00000010
-
 /**受信バッファ configuration*/
 #define RXPACKETBFFMAX 128
 
@@ -53,14 +49,6 @@ public:
 rxBff ConRxBff;
 rxBff ValveRxBff;
 rxBff SepRxBff;
-
-/** ack返答用パラメータ*/
-namespace ackRecieveClass
-{
-  bool isAckRecieved;      /**trueならpcからackを受信済み，応答したらfalseに変更*/
-  uint32_t ackRecieveTime; /**pcからackを受け取った時刻(us)，ACKWAITTIME後までに受信がなければ*/
-  uint8_t ackNodesIds;     /**ackのノードIDのOR*/
-};
 
 namespace ignitionControlClass
 {
@@ -131,9 +119,6 @@ void setup()
   SER_VALVE.begin(9600, SERIAL_8N1, SER_VALVE_RX, SER_VALVE_TX);
   SER_CON.begin(9600, SERIAL_8N1, SER_CON_RX, SER_CON_TX);
   SER_SEP.begin(9600, SERIAL_8N1, SER_SEP_RX, SER_SEP_TX);
-
-  /**ack返答用パラメータの初期化*/
-  ackRecieveClass::isAckRecieved = false;
 }
 
 void loop()
@@ -144,21 +129,6 @@ void loop()
     if (recieve(SER_CON, ConRxBff))
     {
       uint8_t tmpCmdId = GseCom::getCmdId(ConRxBff.data);
-      if (tmpCmdId == 0x00) /**ack受信*/
-      {
-        /**ackのIDの上書き*/
-        ConRxBff.data[3] |= OWNNODEID;
-        /**CRCの再生成*/
-        GseCom::regenPacketCRC(ConRxBff.data);
-        /**ack返答関係の起動*/
-        ackRecieveClass::isAckRecieved = 1;
-        ackRecieveClass::ackNodesIds = ConRxBff.data[3];
-        ackRecieveClass::ackRecieveTime = micros();
-
-        /**下位ノードへackの送信*/
-        SER_VALVE.write(ConRxBff.data, ConRxBff.data[2]);
-        SER_SEP.write(ConRxBff.data, ConRxBff.data[2]);
-      }
 
       if (tmpCmdId == 0x21) /**スイッチ状態受信*/
       {
@@ -199,49 +169,9 @@ void loop()
     if (recieve(SER_VALVE, ValveRxBff))
     {
       uint8_t tmpCmdId = GseCom::getCmdId(ValveRxBff.data);
-      if (tmpCmdId == 0x00) /**ack受信*/
-      {
-        /**ackのIDの上書き*/
-        ackRecieveClass::ackNodesIds |= ValveRxBff.data[3];
-      }
       if (tmpCmdId == 0x61) /**バルブからの転送処理 コマンドid一覧を追加すること*/
       {
         SER_CON.write(ValveRxBff.data, ValveRxBff.data[2]);
-      }
-    }
-
-    /**切り離しからの受信に対する処理*/
-    if (recieve(SER_SEP, SepRxBff))
-    {
-      uint8_t tmpCmdId = GseCom::getCmdId(SepRxBff.data);
-      if (tmpCmdId == 0x00) /**ack受信*/
-      {
-        /**ackのIDの上書き*/
-        ackRecieveClass::ackNodesIds |= SepRxBff.data[3];
-      }
-      if (tmpCmdId == 0x61) /**中継からの転送処理 コマンドid一覧を追加すること*/
-      {
-        SER_CON.write(SepRxBff.data, SepRxBff.data[2]);
-      }
-    }
-
-    /**ackに関する処理*/
-    if (ackRecieveClass::isAckRecieved)
-    {
-      if ((micros() - ackRecieveClass::ackRecieveTime) > ACKWAITTIME * 1000)
-      {
-        /**ackを受信し，上位ノードに応答していない状態
-         * もし下位ノードから応答があった場合
-         * ackRecieveClass::ackNodesIdsが更新されているため問題なし
-         */
-        uint8_t ackPayLoad[1];
-        ackPayLoad[0] = ackRecieveClass::ackNodesIds;
-        uint8_t ackPacket[5];
-        GseCom::makePacket(ackPacket, 0x00, ackPayLoad, 1);
-        SER_CON.write(ackPacket, ackPacket[2]);
-
-        /**送信後処理，ackRecieveClass::isAckRecievedの解放*/
-        ackRecieveClass::isAckRecieved = false;
       }
     }
 
