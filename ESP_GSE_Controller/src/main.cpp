@@ -32,10 +32,6 @@
 /**swComTask configuration*/
 #define TASKINTERVAL_MS 100
 
-/**ack configuration*/
-#define ACKWAITTIME 200 /**ackの待ち時間*/
-#define OWNNODEID 0b00000001
-
 /**受信バッファ configuration*/
 #define RXPACKETBFFMAX 128
 
@@ -51,14 +47,6 @@ rxBff RelayRxBff;
 
 /**com consts.*/
 TaskHandle_t swComTaskHandle; /**スイッチのデータ送信用の処理系*/
-
-/** ack返答用パラメータ*/
-namespace ackRecieveClass
-{
-  bool isAckRecieved;      /**trueならpcからackを受信済み，応答したらfalseに変更*/
-  uint32_t ackRecieveTime; /**pcからackを受け取った時刻(us)，ACKWAITTIME後までに受信がなければ*/
-  uint8_t ackNodesIds;     /**ackのノードIDのOR*/
-};
 
 /** 受信用関数，パケット受信完了したらtrueを返す*/
 IRAM_ATTR bool recieve(HardwareSerial &SER, rxBff &rx)
@@ -138,8 +126,6 @@ void setup()
 
   pinMode(LED, OUTPUT);
 
-  /**ack返答用パラメータの初期化*/
-  ackRecieveClass::isAckRecieved = false;
   /**スイッチ状態確認&送信タスクの起動*/
   xTaskCreateUniversal(swComTask, "comTask", 8192, NULL, 1, &swComTaskHandle, PRO_CPU_NUM);
 }
@@ -152,20 +138,6 @@ void loop()
   if (recieve(SER_PC, PCRxBff))
   {
     uint8_t tmpCmdId = GseCom::getCmdId(PCRxBff.data);
-    if (tmpCmdId == 0x00) /**ack受信*/
-    {
-      /**ackのIDの上書き*/
-      PCRxBff.data[3] |= OWNNODEID;
-      /**CRCの再生成*/
-      GseCom::regenPacketCRC(PCRxBff.data);
-      /**ack返答関係の起動*/
-      ackRecieveClass::isAckRecieved = true;
-      ackRecieveClass::ackNodesIds = PCRxBff.data[3];
-      ackRecieveClass::ackRecieveTime = micros();
-
-      /**下位ノードへackの送信*/
-      SER_RELAY.write(PCRxBff.data, PCRxBff.data[2]);
-    }
 
     if (tmpCmdId == 0x71) /**PCからの転送処理*/
     {
@@ -177,34 +149,10 @@ void loop()
   if (recieve(SER_RELAY, RelayRxBff))
   {
     uint8_t tmpCmdId = GseCom::getCmdId(RelayRxBff.data);
-    if (tmpCmdId == 0x00) /**ack受信*/
-    {
-      /**ackのIDの上書き*/
-      ackRecieveClass::ackNodesIds |= RelayRxBff.data[3];
-    }
+
     if (tmpCmdId == 0x61) /**PCからの転送処理*/
     {
       SER_PC.write(RelayRxBff.data, RelayRxBff.data[2]);
-    }
-  }
-
-  /**ackに関する処理*/
-  if (ackRecieveClass::isAckRecieved)
-  {
-    if ((micros() - ackRecieveClass::ackRecieveTime) > ACKWAITTIME * 1000)
-    {
-      /**ackを受信し，上位ノードに応答していない状態
-       * もし下位ノードから応答があった場合
-       * ackRecieveClass::ackNodesIdsが更新されているため問題なし
-       */
-      uint8_t ackPayLoad[1];
-      ackPayLoad[0] = ackRecieveClass::ackNodesIds;
-      uint8_t ackPacket[5];
-      GseCom::makePacket(ackPacket, 0x00, ackPayLoad, 1);
-      SER_PC.write(ackPacket, ackPacket[2]);
-
-      /**送信後処理，ackRecieveClass::isAckRecievedの解放*/
-      ackRecieveClass::isAckRecieved = false;
     }
   }
 
