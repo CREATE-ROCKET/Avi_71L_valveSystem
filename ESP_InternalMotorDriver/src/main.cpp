@@ -95,6 +95,8 @@ namespace ackRecieveClass
   uint8_t ackNodesIds;       /**ackのノードIDのOR*/
 };
 
+uint8_t isSleepModeOn = 1;
+
 IRAM_ATTR void writeLog()
 {
   SPIFFS.mkdir("logs");
@@ -125,7 +127,7 @@ IRAM_ATTR void controlDCM(void *parameters)
       digitalWrite(MA_N, LOW);
       digitalWrite(MB_N, LOW);
       pcnt_counter_pause(PCNT_UNIT_0);
-      pixels.setPixelColor(0, pixels.Color(00, 20, 0));
+      pixels.setPixelColor(0, pixels.Color(00, 1, 0));
       pixels.show();
       Serial.printf("[%d] valve move end by over range\r\n>>", micros());
       // ログを記録
@@ -182,7 +184,7 @@ IRAM_ATTR void controlDCM(void *parameters)
     if (isMdFinished == 255)
     {
       pcnt_counter_pause(PCNT_UNIT_0);
-      pixels.setPixelColor(0, pixels.Color(00, 20, 0));
+      pixels.setPixelColor(0, pixels.Color(00, 1, 0));
       pixels.show();
       Serial.printf("[%d] valve move end by control\r\n>>", micros());
       // ログを記録
@@ -264,7 +266,7 @@ IRAM_ATTR void controlDCM(void *parameters)
         digitalWrite(MA_N, LOW);
         digitalWrite(MB_N, LOW);
         pcnt_counter_pause(PCNT_UNIT_0);
-        pixels.setPixelColor(0, pixels.Color(00, 20, 0));
+        pixels.setPixelColor(0, pixels.Color(00, 1, 0));
         pixels.show();
         Serial.printf("[%d] valve move end by fill log\r\n>>", micros());
         // ログを記録
@@ -321,7 +323,7 @@ void setup()
 {
   pixels.begin();
   pixels.clear();
-  pixels.setPixelColor(0, pixels.Color(20, 0, 0));
+  pixels.setPixelColor(0, pixels.Color(1, 0, 0));
   pixels.show();
   // pcnt init
   pcnt_config.pulse_gpio_num = ENC_A;
@@ -372,7 +374,7 @@ void setup()
   digitalWrite(MA_N, HIGH);
   digitalWrite(MB_N, HIGH);
 
-  pixels.setPixelColor(0, pixels.Color(0, 20, 0));
+  pixels.setPixelColor(0, pixels.Color(0, 1, 0));
   pixels.show();
 
   pinMode(LOGGER_OUT, OUTPUT);
@@ -483,5 +485,50 @@ void loop()
       SPIFFS.remove("/logs/00001.bin");
       Serial.printf("[%d] logfile remove end usedspace: %d [bytes]\r\n", micros(), SPIFFS.usedBytes());
     }
+
+    // 存在してはいけないのであとで消す！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！
+    if (tmp == 'm')
+    {
+      Serial.print("valve control\r\n>>");
+      Serial.printf("[%d] valve move start (%d[deg] -> %d[deg])\r\n>>", micros(), (int)(target_angle / M_PI * 360), 90);
+
+      pixels.setPixelColor(0, pixels.Color(12, 8, 0));
+      pixels.show();
+      target_angle = (double)90 / 360. * M_PI;
+
+      // 点火のための待機時間
+      delay(1000);
+
+      // Nch idle
+      digitalWrite(MA_N, LOW);
+      digitalWrite(MB_N, LOW);
+      delay(1);
+      if (!isControlRunning)
+      {
+        if (!isControlForbiddenByTime)
+        {
+          isControlRunning = true;
+          digitalWrite(LOGGER_OUT, LOW);
+          pcnt_counter_resume(PCNT_UNIT_0);
+          xTaskCreate(controlDCM, "DCM", 8192, NULL, 1, &controlHandle);
+          isControlForbiddenByTime = true;
+          recentControlTime = micros();
+        }
+        else
+        {
+          Serial.printf("[%d] valve control denied: deadtime\r\n>>", micros());
+        }
+      }
+      else
+      {
+        Serial.printf("[%d] valve control denied: already running\r\n>>", micros());
+      }
+    }
+    // 存在してはいけないのであとで消す！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！
+  }
+
+  if (isSleepModeOn)
+  {
+    delay(1000);
   }
 }
