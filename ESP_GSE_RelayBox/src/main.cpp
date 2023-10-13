@@ -156,6 +156,12 @@ void loop()
         {
           ignitionControlClass::isFireing = false;
         }
+
+        /*ACK送信*/
+        uint8_t ackPayload[1] = {0x00};
+        uint8_t ackPacket[5];
+        GseCom::makePacket(ackPacket, 0x00, ackPayload, 1);
+        SER_CON.write(ackPacket, ackPacket[2]);
       }
 
       if (tmpCmdId == 0x71) /**CONTROLLERからの転送処理*/

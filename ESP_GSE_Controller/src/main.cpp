@@ -47,6 +47,8 @@ rxBff RelayRxBff;
 
 /**com consts.*/
 TaskHandle_t swComTaskHandle; /**スイッチのデータ送信用の処理系*/
+uint32_t getAckLastTime = 0;
+uint32_t ledWidth = 1000;
 
 /** 受信用関数，パケット受信完了したらtrueを返す*/
 IRAM_ATTR bool recieve(HardwareSerial &SER, rxBff &rx)
@@ -150,15 +152,30 @@ void loop()
   {
     uint8_t tmpCmdId = GseCom::getCmdId(RelayRxBff.data);
 
+    if (tmpCmdId == 0x00) /**ACK受信*/
+    {
+      getAckLastTime = millis();
+    }
+
     if (tmpCmdId == 0x61) /**PCからの転送処理*/
     {
       SER_PC.write(RelayRxBff.data, RelayRxBff.data[2]);
     }
   }
 
+  /**ACKの処理*/
+  if (millis() - getAckLastTime > 200)
+  {
+    ledWidth = 100;
+  }
+  else
+  {
+    ledWidth = 1000;
+  }
+
   delay(1);
   counter++;
-  if (counter == 1000)
+  if (counter >= ledWidth)
   {
     digitalWrite(LED, !digitalRead(LED));
     counter = 0;
