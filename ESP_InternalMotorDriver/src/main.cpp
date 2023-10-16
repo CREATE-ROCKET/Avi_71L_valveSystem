@@ -405,40 +405,47 @@ void loop()
     }
     else if (tmpCmdId == 0x71) /**バルブ制御コマンド*/
     {
-      Serial.print("valve control\r\n>>");
-      uint8_t valveTarget = RelayRxBff.data[3];
-      Serial.printf("[%d] valve move start (%d[deg] -> %d[deg])\r\n>>", micros(), (int)(target_angle / M_PI * 360), valveTarget);
-
-      pixels.setPixelColor(0, pixels.Color(12, 8, 0));
-      pixels.show();
-      target_angle = (double)valveTarget / 360. * M_PI;
-
-      // 点火のための待機時間
-      delay(1000);
-
-      // Nch idle
-      digitalWrite(MA_N, LOW);
-      digitalWrite(MB_N, LOW);
-      delay(1);
-      if (!isControlRunning)
+      if (isSleepModeOn == 0)
       {
-        if (!isControlForbiddenByTime)
+        Serial.print("valve control\r\n>>");
+        uint8_t valveTarget = RelayRxBff.data[3];
+        Serial.printf("[%d] valve move start (%d[deg] -> %d[deg])\r\n>>", micros(), (int)(target_angle / M_PI * 360), valveTarget);
+
+        pixels.setPixelColor(0, pixels.Color(12, 8, 0));
+        pixels.show();
+        target_angle = (double)valveTarget / 360. * M_PI;
+
+        // 点火のための待機時間
+        delay(1000);
+
+        // Nch idle
+        digitalWrite(MA_N, LOW);
+        digitalWrite(MB_N, LOW);
+        delay(1);
+        if (!isControlRunning)
         {
-          isControlRunning = true;
-          digitalWrite(LOGGER_OUT, LOW);
-          pcnt_counter_resume(PCNT_UNIT_0);
-          xTaskCreate(controlDCM, "DCM", 8192, NULL, 1, &controlHandle);
-          isControlForbiddenByTime = true;
-          recentControlTime = micros();
+          if (!isControlForbiddenByTime)
+          {
+            isControlRunning = true;
+            digitalWrite(LOGGER_OUT, LOW);
+            pcnt_counter_resume(PCNT_UNIT_0);
+            xTaskCreate(controlDCM, "DCM", 8192, NULL, 1, &controlHandle);
+            isControlForbiddenByTime = true;
+            recentControlTime = micros();
+          }
+          else
+          {
+            Serial.printf("[%d] valve control denied: deadtime\r\n>>", micros());
+          }
         }
         else
         {
-          Serial.printf("[%d] valve control denied: deadtime\r\n>>", micros());
+          Serial.printf("[%d] valve control denied: already running\r\n>>", micros());
         }
       }
       else
       {
-        Serial.printf("[%d] valve control denied: already running\r\n>>", micros());
+        Serial.print("valve control denied: sleep mode\r\n>>");
       }
     }
     else
@@ -489,6 +496,6 @@ void loop()
 
   if (isSleepModeOn)
   {
-    delay(1000);
+    // sleep mode
   }
 }
