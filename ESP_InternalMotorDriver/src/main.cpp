@@ -127,7 +127,7 @@ IRAM_ATTR void controlDCM(void *parameters)
       digitalWrite(MA_N, LOW);
       digitalWrite(MB_N, LOW);
       pcnt_counter_pause(PCNT_UNIT_0);
-      pixels.setPixelColor(0, pixels.Color(00, 1, 0));
+      pixels.setPixelColor(0, pixels.Color(1, 0, 0));
       pixels.show();
       Serial.printf("[%d] valve move end by over range\r\n>>", micros());
       // ログを記録
@@ -184,7 +184,7 @@ IRAM_ATTR void controlDCM(void *parameters)
     if (isMdFinished == 255)
     {
       pcnt_counter_pause(PCNT_UNIT_0);
-      pixels.setPixelColor(0, pixels.Color(00, 1, 0));
+      pixels.setPixelColor(0, pixels.Color(0, 1, 0));
       pixels.show();
       Serial.printf("[%d] valve move end by control\r\n>>", micros());
       // ログを記録
@@ -266,7 +266,7 @@ IRAM_ATTR void controlDCM(void *parameters)
         digitalWrite(MA_N, LOW);
         digitalWrite(MB_N, LOW);
         pcnt_counter_pause(PCNT_UNIT_0);
-        pixels.setPixelColor(0, pixels.Color(00, 1, 0));
+        pixels.setPixelColor(0, pixels.Color(00, 0, 1));
         pixels.show();
         Serial.printf("[%d] valve move end by fill log\r\n>>", micros());
         // ログを記録
@@ -323,7 +323,7 @@ void setup()
 {
   pixels.begin();
   pixels.clear();
-  pixels.setPixelColor(0, pixels.Color(1, 0, 0));
+  pixels.setPixelColor(0, pixels.Color(15, 15, 15));
   pixels.show();
   // pcnt init
   pcnt_config.pulse_gpio_num = ENC_A;
