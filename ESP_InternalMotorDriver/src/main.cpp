@@ -39,7 +39,7 @@
 // #define SER_INT_RX 39
 // #define SER_INT_TX 33
 
-#define LOGGER_OUT 33
+// #define LOGGER_OUT 33
 
 #define SIG_OUT_INDICATOR 25
 #define NUMPIXELS 1
@@ -141,7 +141,7 @@ IRAM_ATTR void controlDCM(void *parameters)
       MDLogMemIndex = 0;
       isMdFinished = 0;
       isControlRunning = false;
-      digitalWrite(LOGGER_OUT, HIGH);
+      // digitalWrite(LOGGER_OUT, HIGH);
       isSleepModeOn = 1;
       vTaskDelete(controlHandle);
     }
@@ -199,7 +199,7 @@ IRAM_ATTR void controlDCM(void *parameters)
       MDLogMemIndex = 0;
       isMdFinished = 0;
       isControlRunning = false;
-      digitalWrite(LOGGER_OUT, HIGH);
+      // digitalWrite(LOGGER_OUT, HIGH);
       isSleepModeOn = 1;
       vTaskDelete(controlHandle);
     }
@@ -282,7 +282,7 @@ IRAM_ATTR void controlDCM(void *parameters)
         MDLogMemIndex = 0;
         isMdFinished = 0;
         isControlRunning = false;
-        digitalWrite(LOGGER_OUT, HIGH);
+        // digitalWrite(LOGGER_OUT, HIGH);
         isSleepModeOn = 1;
         vTaskDelete(controlHandle);
       }
@@ -387,7 +387,7 @@ void setup()
   pixels.setPixelColor(0, pixels.Color(0, 1, 0));
   pixels.show();
 
-  pinMode(LOGGER_OUT, OUTPUT);
+  // pinMode(LOGGER_OUT, OUTPUT);
 }
 
 void loop()
@@ -435,7 +435,7 @@ void loop()
           if (!isControlForbiddenByTime)
           {
             isControlRunning = true;
-            digitalWrite(LOGGER_OUT, LOW);
+            // digitalWrite(LOGGER_OUT, LOW);
             pcnt_counter_resume(PCNT_UNIT_0);
             xTaskCreate(controlDCM, "DCM", 8192, NULL, 1, &controlHandle);
             isControlForbiddenByTime = true;
