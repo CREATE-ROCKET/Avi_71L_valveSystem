@@ -30,8 +30,14 @@
 #define SER_RELAY Serial1
 #define SER_RELAY_RX 26
 #define SER_RELAY_TX 27
-// #define SER_RELAY_RX 36
-// #define SER_RELAY_TX 25
+
+#define SER_RTD Serial2
+#define SER_RTD_RX 36
+#define SER_RTD_TX 25
+
+// #define SER_INT Serial
+// #define SER_INT_RX 39
+// #define SER_INT_TX 33
 
 #define LOGGER_OUT 33
 
@@ -341,20 +347,21 @@ void setup()
 
   Serial.begin(115200);
 
-  Serial.println();
-  Serial.print(CREATE_LOGO);
-  Serial.printf("ESP launched\r\nValve Control BRD version:230524\r\n>>", micros());
+  // Serial.println();
+  // Serial.print(CREATE_LOGO);
+  // Serial.printf("ESP launched\r\nValve Control BRD version:230524\r\n>>", micros());
 
   if (!SPIFFS.begin(true))
   {
-    Serial.printf("[%d] SPIFFS init fail\r\n>>", micros());
+    // Serial.printf("[%d] SPIFFS init fail\r\n>>", micros());
   }
   else
   {
-    Serial.printf("[%d] SPIFFS total: %d [bytes], fill: %d [bytes]\r\n>>", micros(), SPIFFS.totalBytes(), SPIFFS.usedBytes());
+    // Serial.printf("[%d] SPIFFS total: %d [bytes], fill: %d [bytes]\r\n>>", micros(), SPIFFS.totalBytes(), SPIFFS.usedBytes());
   }
 
   SER_RELAY.begin(9600, SERIAL_8N1, SER_RELAY_RX, SER_RELAY_TX);
+  SER_RTD.begin(115200, SERIAL_8N1, SER_RTD_RX, SER_RTD_TX);
   pinMode(MA_N, OUTPUT);
   pinMode(MA_P, OUTPUT);
   pinMode(MB_N, OUTPUT);
@@ -378,8 +385,6 @@ void setup()
   pixels.show();
 
   pinMode(LOGGER_OUT, OUTPUT);
-
-  delay(1000);
 }
 
 void loop()
@@ -448,19 +453,30 @@ void loop()
         Serial.print("valve control denied: sleep mode\r\n>>");
       }
     }
-    else if (tmpCmdId == 0x61)
+    else if (tmpCmdId == 0x61) /**スリープモード遷移コマンド*/
     {
+      SER_RTD.write(RelayRxBff.data, RelayRxBff.data[2]);
       // change sleepmode
-      isSleepModeOn = RelayRxBff.data[3];
-      // change led color
-      if (isSleepModeOn)
+      if (RelayRxBff.data[3] == 0x00)
       {
-        pixels.setPixelColor(0, pixels.Color(0, 1, 0));
+        // active mode
+        isSleepModeOn = 0;
+        uint8_t valveReturnPayload = 0x80;
+        uint8_t valveReturnPacket[5];
+        GseCom::makePacket(valveReturnPacket, 0x61, &valveReturnPayload, 1);
+        SER_RELAY.write(valveReturnPacket, valveReturnPacket[2]);
+        pixels.setPixelColor(0, pixels.Color(1, 1, 1));
         pixels.show();
       }
-      else
+      else if (RelayRxBff.data[3] == 0x01)
       {
-        pixels.setPixelColor(0, pixels.Color(1, 1, 1));
+        // sleep mode
+        isSleepModeOn = 1;
+        uint8_t valveReturnPayload = 0x81;
+        uint8_t valveReturnPacket[5];
+        GseCom::makePacket(valveReturnPacket, 0x61, &valveReturnPayload, 1);
+        SER_RELAY.write(valveReturnPacket, valveReturnPacket[2]);
+        pixels.setPixelColor(0, pixels.Color(0, 1, 0));
         pixels.show();
       }
     }
