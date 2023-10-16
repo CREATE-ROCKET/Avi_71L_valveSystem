@@ -29,9 +29,9 @@
 #define SER_VALVE Serial2
 #define SER_VALVE_TX 26
 #define SER_VALVE_RX 25
-#define SER_SEP Serial
-#define SER_SEP_TX 33
-#define SER_SEP_RX 32
+// #define SER_SEP Serial
+// #define SER_SEP_TX 33
+// #define SER_SEP_RX 32
 
 /**comTask configuration*/
 #define TASKINTERVAL_MS 10
@@ -118,7 +118,7 @@ void setup()
   pinMode(SER_CON_RX, INPUT);
   SER_VALVE.begin(9600, SERIAL_8N1, SER_VALVE_RX, SER_VALVE_TX);
   SER_CON.begin(9600, SERIAL_8N1, SER_CON_RX, SER_CON_TX);
-  SER_SEP.begin(9600, SERIAL_8N1, SER_SEP_RX, SER_SEP_TX);
+  // SER_SEP.begin(9600, SERIAL_8N1, SER_SEP_RX, SER_SEP_TX);
 }
 
 void loop()
@@ -167,7 +167,13 @@ void loop()
       if (tmpCmdId == 0x71) /**CONTROLLERからの転送処理*/
       {
         SER_VALVE.write(ConRxBff.data, ConRxBff.data[2]);
-        SER_SEP.write(ConRxBff.data, ConRxBff.data[2]);
+        // SER_SEP.write(ConRxBff.data, ConRxBff.data[2]);
+      }
+
+      if (tmpCmdId == 0x61) /**CONTROLLERからの転送処理*/
+      {
+        SER_VALVE.write(ConRxBff.data, ConRxBff.data[2]);
+        // SER_SEP.write(ConRxBff.data, ConRxBff.data[2]);
       }
     }
 

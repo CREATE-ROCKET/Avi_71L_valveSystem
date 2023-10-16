@@ -145,6 +145,10 @@ void loop()
     {
       SER_RELAY.write(PCRxBff.data, PCRxBff.data[2]);
     }
+    if (tmpCmdId == 0x61)
+    {
+      SER_RELAY.write(PCRxBff.data, PCRxBff.data[2]);
+    }
   }
 
   /**中継基板からの受信に対する処理*/
