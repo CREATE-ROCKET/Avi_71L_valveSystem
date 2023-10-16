@@ -142,6 +142,7 @@ IRAM_ATTR void controlDCM(void *parameters)
       isMdFinished = 0;
       isControlRunning = false;
       digitalWrite(LOGGER_OUT, HIGH);
+      isSleepModeOn = 1;
       vTaskDelete(controlHandle);
     }
 
@@ -199,6 +200,7 @@ IRAM_ATTR void controlDCM(void *parameters)
       isMdFinished = 0;
       isControlRunning = false;
       digitalWrite(LOGGER_OUT, HIGH);
+      isSleepModeOn = 1;
       vTaskDelete(controlHandle);
     }
     else if (isMdFinished > 0)
@@ -250,15 +252,15 @@ IRAM_ATTR void controlDCM(void *parameters)
       if (MDLogMemIndex % 100 == 0)
       {
         // シリアル通信に流す
-        uint8_t payload[30];
-        memcpy(payload, &MDLogDataMem[MDLogMemIndex]._time, sizeof(unsigned long));
-        memcpy(payload + 4, &MDLogDataMem[MDLogMemIndex]._enc_pcnt, sizeof(int16_t));
-        memcpy(payload + 6, &target_angle, sizeof(double));
-        memcpy(payload + 14, &MDLogDataMem[MDLogMemIndex]._motor_angle, sizeof(double));
-        memcpy(payload + 22, &MDLogDataMem[MDLogMemIndex]._d_motor_angle, sizeof(double));
-        uint8_t packet[34];
-        GseCom::makePacket(packet, 0x61, payload, 30);
-        SER_RELAY.write(packet, packet[2]);
+        // uint8_t payload[30];
+        // memcpy(payload, &MDLogDataMem[MDLogMemIndex]._time, sizeof(unsigned long));
+        // memcpy(payload + 4, &MDLogDataMem[MDLogMemIndex]._enc_pcnt, sizeof(int16_t));
+        // memcpy(payload + 6, &target_angle, sizeof(double));
+        // memcpy(payload + 14, &MDLogDataMem[MDLogMemIndex]._motor_angle, sizeof(double));
+        // memcpy(payload + 22, &MDLogDataMem[MDLogMemIndex]._d_motor_angle, sizeof(double));
+        // uint8_t packet[34];
+        // GseCom::makePacket(packet, 0x61, payload, 30);
+        // SER_RELAY.write(packet, packet[2]);
       }
 
       // ログの配列のインデックスを加算
@@ -281,6 +283,7 @@ IRAM_ATTR void controlDCM(void *parameters)
         isMdFinished = 0;
         isControlRunning = false;
         digitalWrite(LOGGER_OUT, HIGH);
+        isSleepModeOn = 1;
         vTaskDelete(controlHandle);
       }
     }
