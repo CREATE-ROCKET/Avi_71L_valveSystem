@@ -448,6 +448,22 @@ void loop()
         Serial.print("valve control denied: sleep mode\r\n>>");
       }
     }
+    else if (tmpCmdId == 0x61)
+    {
+      // change sleepmode
+      isSleepModeOn = RelayRxBff.data[3];
+      // change led color
+      if (isSleepModeOn)
+      {
+        pixels.setPixelColor(0, pixels.Color(0, 1, 0));
+        pixels.show();
+      }
+      else
+      {
+        pixels.setPixelColor(0, pixels.Color(1, 1, 1));
+        pixels.show();
+      }
+    }
     else
     {
       Serial.print("unknown\r\n>>");
