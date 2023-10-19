@@ -155,6 +155,11 @@ void loop()
         else
         {
           ignitionControlClass::isFireing = false;
+          /*ACKをバルブに送信*/
+          uint8_t ackPayload[1] = {0x00};
+          uint8_t ackPacket[5];
+          GseCom::makePacket(ackPacket, 0x00, ackPayload, 1);
+          SER_VALVE.write(ackPacket, ackPacket[2]);
         }
 
         /*ACK送信*/

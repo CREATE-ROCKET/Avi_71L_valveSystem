@@ -77,10 +77,6 @@ bool isControlForbiddenByTime = false;
 
 pcnt_config_t pcnt_config;
 
-/**ack configuration*/
-#define ACKWAITTIME 0 /**ackの待ち時間*/
-#define OWNNODEID 0b00000100
-
 /**受信バッファ configuration*/
 #define RXPACKETBFFMAX 128
 
@@ -102,6 +98,7 @@ namespace ackRecieveClass
 };
 
 uint8_t isSleepModeOn = 1;
+unsigned long lastAckRecieved = 0;
 
 IRAM_ATTR void writeLog()
 {
@@ -396,22 +393,7 @@ void loop()
   {
     Serial.printf("[%d] relay cmd type: ", micros());
     uint8_t tmpCmdId = GseCom::getCmdId(RelayRxBff.data);
-    if (tmpCmdId == 0x00) /**ack受信*/
-    {
-      Serial.print("ack\r\n>>");
-      /**ackのIDの上書き*/
-      RelayRxBff.data[3] |= OWNNODEID;
-      /**CRCの再生成*/
-      GseCom::regenPacketCRC(RelayRxBff.data);
-      /**ack返答関係の起動*/
-      ackRecieveClass::isAckRecieved = 1;
-      ackRecieveClass::ackNodesIds = RelayRxBff.data[3];
-      ackRecieveClass::ackRecieveTime = micros();
-
-      /**上位ノードへackの返信*/
-      SER_RELAY.write(RelayRxBff.data, RelayRxBff.data[2]);
-    }
-    else if (tmpCmdId == 0x71) /**バルブ制御コマンド*/
+    if (tmpCmdId == 0x71) /**バルブ制御コマンド*/
     {
       if (isSleepModeOn == 0)
       {
@@ -462,6 +444,7 @@ void loop()
       // change sleepmode
       if (RelayRxBff.data[3] == 0x00)
       {
+        Serial.printf("modechange: active\r\n>>");
         // active mode
         isSleepModeOn = 0;
         uint8_t valveReturnPayload = 0x80;
@@ -473,6 +456,7 @@ void loop()
       }
       else if (RelayRxBff.data[3] == 0x01)
       {
+        Serial.printf("modechange: sleep\r\n>>");
         // sleep mode
         isSleepModeOn = 1;
         uint8_t valveReturnPayload = 0x81;
@@ -482,6 +466,12 @@ void loop()
         pixels.setPixelColor(0, pixels.Color(0, 1, 0));
         pixels.show();
       }
+    }
+    else if (tmpCmdId == 0x00)
+    {
+      /**ackを受信*/
+      lastAckRecieved = esp_timer_get_time();
+      Serial.printf("ack recieved\r\n>>");
     }
     else
     {
@@ -526,6 +516,17 @@ void loop()
       Serial.printf("[%d] start remove logfile\r\n", micros());
       SPIFFS.remove("/logs/00001.bin");
       Serial.printf("[%d] logfile remove end usedspace: %d [bytes]\r\n", micros(), SPIFFS.usedBytes());
+    }
+  }
+
+  if ((esp_timer_get_time() - lastAckRecieved) > 10000000)
+  {
+    if (isSleepModeOn == 0)
+    {
+      isSleepModeOn = 1;
+      pixels.setPixelColor(0, pixels.Color(0, 1, 0));
+      pixels.show();
+      Serial.printf("[%d] sleep mode by timeout\r\n>>", micros());
     }
   }
 
