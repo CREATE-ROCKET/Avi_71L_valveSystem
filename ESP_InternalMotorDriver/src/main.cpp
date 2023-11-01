@@ -33,7 +33,7 @@
 
 #define SER_RTD Serial2
 #define SER_RTD_RX 36
-#define SER_RTD_TX 25
+#define SER_RTD_TX 32
 
 // #define SER_INT Serial
 // #define SER_INT_RX 39
@@ -88,6 +88,7 @@ public:
   uint8_t data[RXPACKETBFFMAX];
 };
 rxBff RelayRxBff;
+rxBff RTDRxBff;
 
 /** ack返答用パラメータ*/
 namespace ackRecieveClass
@@ -98,7 +99,7 @@ namespace ackRecieveClass
 };
 
 uint8_t isSleepModeOn = 1;
-unsigned long lastAckRecieved = 0;
+int64_t lastAckRecieved = 0;
 
 IRAM_ATTR void writeLog()
 {
@@ -447,6 +448,7 @@ void loop()
         Serial.printf("modechange: active\r\n>>");
         // active mode
         isSleepModeOn = 0;
+        lastAckRecieved = esp_timer_get_time();
         uint8_t valveReturnPayload = 0x80;
         uint8_t valveReturnPacket[5];
         GseCom::makePacket(valveReturnPacket, 0x61, &valveReturnPayload, 1);
@@ -487,6 +489,15 @@ void loop()
     }
   }
 
+  if (recieve(SER_RTD, RTDRxBff))
+  {
+    uint8_t tmpCmdId = GseCom::getCmdId(RTDRxBff.data);
+    if (tmpCmdId == 0x61) /**モード遷移*/
+    {
+      SER_RELAY.write(RTDRxBff.data, RTDRxBff.data[2]);
+    }
+  }
+
   // デバッガからに受信の場合
   if (Serial.available())
   {
@@ -519,14 +530,17 @@ void loop()
     }
   }
 
-  if ((esp_timer_get_time() - lastAckRecieved) > 10000000)
+  if (!isControlRunning)
   {
-    if (isSleepModeOn == 0)
+    if ((esp_timer_get_time() - lastAckRecieved) > 10000000)
     {
-      isSleepModeOn = 1;
-      pixels.setPixelColor(0, pixels.Color(0, 1, 0));
-      pixels.show();
-      Serial.printf("[%d] sleep mode by timeout\r\n>>", micros());
+      if (isSleepModeOn == 0)
+      {
+        isSleepModeOn = 1;
+        pixels.setPixelColor(0, pixels.Color(0, 1, 0));
+        pixels.show();
+        Serial.printf("[%d] sleep mode by timeout\r\n>>", micros());
+      }
     }
   }
 
