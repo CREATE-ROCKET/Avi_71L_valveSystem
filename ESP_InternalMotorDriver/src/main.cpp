@@ -57,6 +57,8 @@ double Voltage = 0.;                    // 指令電圧
 int16_t fric_up_border = 300, fric_down_border = 5;
 uint8_t isMdFinished = 0;
 
+int16_t recent_enc_cnt = 0;
+
 // memory variables
 int MDLogMemIndex = 0;
 struct MDLogData
@@ -123,6 +125,7 @@ IRAM_ATTR void controlDCM(void *parameters)
     int16_t enc_pcnt; /**エンコーダ読み取り用変数*/
     MDLogDataMem[MDLogMemIndex]._time = micros();
     pcnt_get_counter_value(PCNT_UNIT_0, &enc_pcnt);
+    recent_enc_cnt = enc_pcnt;
 
     if ((enc_pcnt < -100) || (1300 < enc_pcnt))
     {
@@ -495,6 +498,16 @@ void loop()
     if (tmpCmdId == 0x61) /**モード遷移*/
     {
       SER_RELAY.write(RTDRxBff.data, RTDRxBff.data[2]);
+    }
+    else if (tmpCmdId == 0xF0) /**open rate 転送*/
+    {
+      uint8_t openRateParam[2];
+      openRateParam[0] = (uint8_t)(recent_enc_cnt & 0x00FF);
+      openRateParam[1] = (uint8_t)((recent_enc_cnt & 0xFF00) >> 8);
+
+      uint8_t openRatePacket[6];
+      GseCom::makePacket(openRatePacket, 0xF0, openRateParam, 2);
+      SER_RTD.write(openRatePacket, openRatePacket[2]);
     }
   }
 
