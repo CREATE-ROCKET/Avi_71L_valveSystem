@@ -1,7 +1,7 @@
 #include <Arduino.h>
 #include <Adafruit_NeoPixel.h>
 
-#define PIN 32
+#define PIN 14
 #define NUMPIXELS 1
 Adafruit_NeoPixel pixels(NUMPIXELS, PIN, NEO_GRB + NEO_KHZ800);
 
@@ -12,18 +12,20 @@ void setup()
   Serial.begin(115200);
 }
 
+void changeColor(int r, int g, int b)
+{
+  pixels.setPixelColor(0, pixels.Color(r, g, b));
+  pixels.show();
+}
+
 void loop()
 {
-  Serial.print("r");
-  pixels.setPixelColor(0, pixels.Color(20, 0, 0));
-  pixels.show();
-  delay(100);
-  Serial.print("g");
-  pixels.setPixelColor(0, pixels.Color(0, 20, 0));
-  pixels.show();
-  delay(100);
-  Serial.print("b");
-  pixels.setPixelColor(0, pixels.Color(0, 0, 20));
-  pixels.show();
-  delay(100);
+  for (int i = 0; i < 3; i++)
+  {
+    uint32_t time_start = micros();
+    changeColor(i % 3, (i + 1) % 3, (i + 2) % 3);
+    uint32_t time_end = micros();
+    Serial.printf("Time: %d\r\n", time_end - time_start); // 197us
+    delay(1000);
+  }
 }
