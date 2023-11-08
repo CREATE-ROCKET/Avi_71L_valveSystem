@@ -509,6 +509,10 @@ void loop()
       GseCom::makePacket(openRatePacket, 0xF0, openRateParam, 2);
       SER_RTD.write(openRatePacket, openRatePacket[2]);
     }
+    else if (tmpCmdId == 0x51)
+    {
+      SER_RELAY.write(RelayRxBff.data, RelayRxBff.data[2]);
+    }
   }
 
   // デバッガからに受信の場合

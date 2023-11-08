@@ -190,6 +190,10 @@ void loop()
       {
         SER_CON.write(ValveRxBff.data, ValveRxBff.data[2]);
       }
+      else if (tmpCmdId == 0x51)
+      {
+        SER_CON.write(ValveRxBff.data, ValveRxBff.data[2]);
+      }
     }
 
     /**見やすくするための行*/

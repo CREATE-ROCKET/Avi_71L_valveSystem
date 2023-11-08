@@ -161,7 +161,12 @@ void loop()
       getAckLastTime = millis();
     }
 
-    if (tmpCmdId == 0x61) /**PCからの転送処理*/
+    else if (tmpCmdId == 0x61)
+    {
+      SER_PC.write(RelayRxBff.data, RelayRxBff.data[2]);
+    }
+
+    else if (tmpCmdId == 0x51)
     {
       SER_PC.write(RelayRxBff.data, RelayRxBff.data[2]);
     }
