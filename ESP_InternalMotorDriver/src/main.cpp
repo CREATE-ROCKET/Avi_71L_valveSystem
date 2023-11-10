@@ -511,7 +511,7 @@ void loop()
     }
     else if (tmpCmdId == 0x51)
     {
-      SER_RELAY.write(RelayRxBff.data, RelayRxBff.data[2]);
+      SER_RELAY.write(RTDRxBff.data, RTDRxBff.data[2]);
     }
   }
 
