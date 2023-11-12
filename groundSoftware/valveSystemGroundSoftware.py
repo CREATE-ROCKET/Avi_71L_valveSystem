@@ -18,6 +18,7 @@ class SenderFrame(tk.Frame):
         tk.Button(self, text="Flight", command=lambda: self.send_data("flight")).pack(pady=10)
         tk.Button(self, text="Sleep", command=lambda: self.send_data("sleep")).pack(pady=10)
         tk.Button(self, text="Elace", command=lambda: self.send_data("elace")).pack(pady=10)
+        tk.Button(self, text="reboot", command=lambda: self.send_data("reboot")).pack(pady=10)
 
     def send_data(self, data_to_send):
         if data_to_send == "flight":
@@ -25,7 +26,9 @@ class SenderFrame(tk.Frame):
         elif data_to_send == "sleep":
             data_hex = bytes.fromhex("43 61 05 01 49")
         elif data_to_send == "elace":
-            data_hex = bytes.fromhex("43 00 05 80 69")
+            data_hex = bytes.fromhex("43 61 05 05 55")
+        elif data_to_send == "reboot":
+            data_hex = bytes.fromhex("43 61 05 77 0C")
         else:
             #print(f"Invalid input: {data_to_send}")
             return
