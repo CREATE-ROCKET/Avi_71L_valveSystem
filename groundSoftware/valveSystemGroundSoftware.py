@@ -84,6 +84,8 @@ class ReceiverFrame(tk.Frame):
                     received = True
                     break  
 
+            self.update()
+
         if received:
             hex_data = ', '.join([format(b, '02x') for b in data])
             self.File.write("time,"+"{:.5f}".format(time.time())+","+datetime.datetime.now().strftime("date,%Y,%m,%d,%H,%M,%S,data,") + hex_data + "\n")
