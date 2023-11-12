@@ -3,6 +3,7 @@ import serial
 from configparser import ConfigParser
 from itertools import count
 import time
+import datetime
 
 class SenderFrame(tk.Frame):
     def __init__(self, master=None, serial_instance=None):
@@ -33,6 +34,9 @@ class SenderFrame(tk.Frame):
 
 
 class ReceiverFrame(tk.Frame):
+    saveFileName = datetime.datetime.now().strftime("%Y%m%d-%H%M%S") + ".log"
+    File = open(saveFileName, "w")
+
     def __init__(self, master=None, serial_instance=None):
         super().__init__(master)
         self.master = master
@@ -79,6 +83,8 @@ class ReceiverFrame(tk.Frame):
 
         if received:
             hex_data = ', '.join([format(b, '02x') for b in data])
+            self.File.write("time,"+"{:.5f}".format(time.time())+","+datetime.datetime.now().strftime("date,%Y,%m,%d,%H,%M,%S,data,") + hex_data + "\n")
+            self.File.flush()
             self.received_data_listbox.insert(tk.END, f"Received (Hex): {hex_data}")
             self.received_data_listbox.yview(tk.END)
 
