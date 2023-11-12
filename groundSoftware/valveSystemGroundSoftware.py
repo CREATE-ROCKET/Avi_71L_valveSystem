@@ -75,7 +75,7 @@ class ReceiverFrame(tk.Frame):
 
                 data += byte
 
-                if (i == 13) :
+                if (i == 14) :
                     received = True
                     break
             
