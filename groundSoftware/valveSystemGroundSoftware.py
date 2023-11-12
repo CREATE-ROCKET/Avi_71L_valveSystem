@@ -18,7 +18,7 @@ class SenderFrame(tk.Frame):
         tk.Button(self, text="Flight", command=lambda: self.send_data("flight")).pack(pady=10)
         tk.Button(self, text="Sleep", command=lambda: self.send_data("sleep")).pack(pady=10)
         tk.Button(self, text="Elace", command=lambda: self.send_data("elace")).pack(pady=10)
-        tk.Button(self, text="reboot", command=lambda: self.send_data("reboot")).pack(pady=10)
+        tk.Button(self, text="Reboot", command=lambda: self.send_data("reboot")).pack(pady=10)
 
     def send_data(self, data_to_send):
         if data_to_send == "flight":
