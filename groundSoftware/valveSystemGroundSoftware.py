@@ -88,7 +88,7 @@ class ReceiverFrame(tk.Frame):
             hex_data = ', '.join([format(b, '02x') for b in data])
             self.File.write("time,"+"{:.5f}".format(time.time())+","+datetime.datetime.now().strftime("date,%Y,%m,%d,%H,%M,%S,data,") + hex_data + "\n")
             self.File.flush()
-            self.received_data_listbox.insert(tk.END, f"Received (Hex): {hex_data}")
+            self.received_data_listbox.insert(tk.END, datetime.datetime.now().strftime("%Y%m%d-%H%M%S")+f":  {hex_data}")
             self.received_data_listbox.yview(tk.END)
 
         self.master.after(50, self.receive_data)
