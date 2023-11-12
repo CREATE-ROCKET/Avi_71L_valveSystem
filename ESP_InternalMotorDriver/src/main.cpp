@@ -471,6 +471,14 @@ void loop()
         pixels.setPixelColor(0, pixels.Color(0, 1, 0));
         pixels.show();
       }
+      else if (RelayRxBff.data[3] == 0x77)
+      {
+        if (!isControlRunning)
+        {
+          delay(1000);
+          ESP.restart();
+        }
+      }
     }
     else if (tmpCmdId == 0x00)
     {
