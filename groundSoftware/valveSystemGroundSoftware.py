@@ -150,8 +150,8 @@ class MainApplication(tk.Tk):
 
         if not self.config.has_section("COM"):
             self.config.add_section("COM")
-        self.config.set("COM", "port", "COM13")
-        self.config.set("COM", "baudrate", "115200")
+        self.config.set("COM", "port", "COM10")
+        self.config.set("COM", "baudrate", "9600")
 
         com_port = self.config.get("COM", "port")
         baudrate = int(self.config.get("COM", "baudrate"))

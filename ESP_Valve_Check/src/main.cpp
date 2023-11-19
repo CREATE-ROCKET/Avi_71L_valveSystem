@@ -108,7 +108,7 @@ void setup()
 
   // delay(10000);
 
-  // xTaskCreatePinnedToCore(send, "send", 4096, NULL, 1, NULL, 1);
+  xTaskCreatePinnedToCore(send, "send", 4096, NULL, 1, NULL, 1);
 }
 void loop()
 {
