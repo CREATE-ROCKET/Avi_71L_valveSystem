@@ -6,6 +6,31 @@ import time
 import datetime
 
 class SenderFrame(tk.Frame):
+    
+    def crc8(data):
+        """
+        Calculate the CRC8 checksum for the given data.
+
+        Args:
+        data (bytes): The data for which the CRC8 is to be calculated.
+
+        Returns:
+        int: The CRC8 checksum.
+        """
+        polynomial = 0x07
+        crc = 0x00
+
+        for byte in data:
+            crc ^= byte
+            for _ in range(8):
+                if crc & 0x80:
+                    crc = (crc << 1) ^ polynomial
+                else:
+                    crc <<= 1
+                crc &= 0xFF  # Ensure that CRC remains within 8 bits
+
+        return crc
+    
     def __init__(self, master=None, serial_instance=None):
         super().__init__(master)
         self.master = master
@@ -19,6 +44,27 @@ class SenderFrame(tk.Frame):
         tk.Button(self, text="Sleep", command=lambda: self.send_data("sleep")).pack(pady=10)
         tk.Button(self, text="Elace", command=lambda: self.send_data("elace")).pack(pady=10)
         tk.Button(self, text="Reboot", command=lambda: self.send_data("reboot")).pack(pady=10)
+
+        # 新たに追加されるウィジェット
+        self.deg_entry = tk.Entry(self)
+        self.deg_entry.pack(pady=10)
+        tk.Button(self, text="Launcher", command=self.launch_data).pack(pady=10)
+
+    def launch_data(self):
+        deg = self.deg_entry.get()
+        try:
+            deg_value = int(deg)
+            if 68 <= deg_value <= 80:
+                # 指定された範囲内の値の場合、シリアルデータを出力
+                data_hex = bytes.fromhex(f"43 61 06 99 {deg_value:02x}")
+                crc = SenderFrame.crc8(data_hex)
+                self.serial_instance.write(data_hex + bytes([crc]))
+            else:
+                # 範囲外の場合は出力しない
+                pass
+        except ValueError:
+            # 入力が整数でない場合は何もしない
+            pass
 
     def send_data(self, data_to_send):
         if data_to_send == "flight":
