@@ -84,29 +84,47 @@ void setup()
   digitalWrite(LED_Y, HIGH);
   Serial1.begin(9600, SERIAL_8N1, 33, 32);
 
-  // digitalWrite(LED_R, LOW);
-  // delay(1000);
+  digitalWrite(LED_R, LOW);
+  delay(1000);
+
+  uint8_t swPayload[1];
+  swPayload[0] = 0x00;
+  /**パラメータからパケットの生成*/
+  uint8_t swPacket[5];
+  GseCom::makePacket(swPacket, 0x61, swPayload, 1);
+  Serial1.write(swPacket, swPacket[2]);
+
+  digitalWrite(LED_B, LOW);
+  delay(1000);
 
   // uint8_t swPayload[1];
-  // swPayload[0] = 0x00;
-  // /**パラメータからパケットの生成*/
+  swPayload[0] = 0x5A;
+  /**パラメータからパケットの生成*/
   // uint8_t swPacket[5];
-  // GseCom::makePacket(swPacket, 0x61, swPayload, 1);
-  // Serial1.write(swPacket, swPacket[2]);
+  GseCom::makePacket(swPacket, 0x71, swPayload, 1);
+  Serial1.write(swPacket, swPacket[2]);
 
-  // digitalWrite(LED_B, LOW);
-  // delay(1000);
+  digitalWrite(LED_Y, LOW);
+  digitalWrite(LED_R, HIGH);
+  digitalWrite(LED_B, HIGH);
 
-  // // uint8_t swPayload[1];
-  // swPayload[0] = 0x5A;
-  // /**パラメータからパケットの生成*/
-  // // uint8_t swPacket[5];
-  // GseCom::makePacket(swPacket, 0x71, swPayload, 1);
-  // Serial1.write(swPacket, swPacket[2]);
+  delay(10000);
 
-  // digitalWrite(LED_Y, LOW);
+  // バルブの位相を戻す
+  digitalWrite(LED_R, LOW);
+  delay(1000);
 
-  // delay(10000);
+  Serial1.write(swPacket, swPacket[2]);
+
+  digitalWrite(LED_B, LOW);
+
+  delay(1000);
+
+  swPayload[0] = 0x00;
+  GseCom::makePacket(swPacket, 0x71, swPayload, 1);
+  Serial1.write(swPacket, swPacket[2]);
+
+  digitalWrite(LED_Y, LOW);
 
   xTaskCreatePinnedToCore(send, "send", 4096, NULL, 1, NULL, 1);
 }
