@@ -114,6 +114,11 @@ void setup()
   digitalWrite(LED_R, LOW);
   delay(1000);
 
+  swPayload[0] = 0x00;
+  GseCom::makePacket(swPacket, 0x61, swPayload, 1);
+  Serial1.write(swPacket, swPacket[2]);
+
+  delay(1000);
   Serial1.write(swPacket, swPacket[2]);
 
   digitalWrite(LED_B, LOW);
