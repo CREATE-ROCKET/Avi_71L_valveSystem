@@ -117,8 +117,30 @@ int64_t lastAckRecieved = 0;
 //   writeFp.close();
 // }
 
+namespace simpleLog
+{
+  uint8_t isLogHere = 0;
+
+  int16_t startEncCnt;
+  int16_t endEncCnt;
+  uint8_t cmdTargetAngle;
+  uint8_t finishState;
+
+  IRAM_ATTR void writeLog()
+  {
+    SPIFFS.mkdir("logs");
+    char writeFileName[32] = "/logs/00001.bin";
+    File writeFp = SPIFFS.open(writeFileName, "a");
+    writeFp.printf("[%d] s:%d e:%d t:%d f:%d\r\n", micros(), startEncCnt, endEncCnt, cmdTargetAngle, finishState);
+    Serial.printf("[%d] s:%d e:%d t:%d f:%d\r\n", micros(), startEncCnt, endEncCnt, cmdTargetAngle, finishState);
+    writeFp.flush();
+    writeFp.close();
+  }
+}
+
 IRAM_ATTR void controlDCM(void *parameters)
 {
+  pcnt_get_counter_value(PCNT_UNIT_0, &simpleLog::startEncCnt);
 
   for (;;)
   {
@@ -141,6 +163,9 @@ IRAM_ATTR void controlDCM(void *parameters)
       Serial.printf("[%d] valve move end by over range\r\n>>", micros());
       // ログを記録
       // writeLog();
+      simpleLog::finishState = 2;
+      simpleLog::endEncCnt = enc_pcnt;
+      simpleLog::isLogHere = 1;
       MDLogMemIndex = 0;
       isMdFinished = 0;
       isControlRunning = false;
@@ -199,6 +224,9 @@ IRAM_ATTR void controlDCM(void *parameters)
       Serial.printf("[%d] valve move end by control\r\n>>", micros());
       // ログを記録
       // writeLog();
+      simpleLog::finishState = 0;
+      simpleLog::endEncCnt = enc_pcnt;
+      simpleLog::isLogHere = 1;
       MDLogMemIndex = 0;
       isMdFinished = 0;
       isControlRunning = false;
@@ -282,6 +310,9 @@ IRAM_ATTR void controlDCM(void *parameters)
         Serial.printf("[%d] valve move end by fill log\r\n>>", micros());
         // ログを記録
         // writeLog();
+        simpleLog::finishState = 1;
+        simpleLog::endEncCnt = enc_pcnt;
+        simpleLog::isLogHere = 1;
         MDLogMemIndex = 0;
         isMdFinished = 0;
         isControlRunning = false;
@@ -414,6 +445,7 @@ void loop()
       {
         Serial.print("valve control\r\n>>");
         uint8_t valveTarget = RelayRxBff.data[3];
+        simpleLog::cmdTargetAngle = valveTarget;
         Serial.printf("[%d] valve move start (%d[deg] -> %d[deg])\r\n>>", micros(), (int)(target_angle / M_PI * 360), valveTarget);
 
         pixels.setPixelColor(0, pixels.Color(12, 8, 0));
@@ -544,13 +576,16 @@ void loop()
       uint32_t filesize = readFp.size();
       Serial.printf("[%d] read log filesize: %d [bytes]\r\n", micros(), filesize);
 
-      for (int i = 0; i <= (filesize / 256) + 1; i++)
+      for (int i = 0;; i++)
       {
         uint8_t bf[256];
         uint16_t readsize = 256;
-        if (i == (filesize / 256))
+        if ((i + 1) * 256 > filesize)
         {
           readsize = filesize % 256;
+          readFp.read(bf, readsize);
+          Serial.write(bf, readsize);
+          break;
         }
         readFp.read(bf, readsize);
         Serial.write(bf, readsize);
@@ -583,5 +618,12 @@ void loop()
   if (isSleepModeOn)
   {
     // sleep mode
+  }
+
+  if (simpleLog::isLogHere)
+  {
+    simpleLog::writeLog();
+    Serial.printf("[%d] log write end\r\n>>", micros());
+    simpleLog::isLogHere = 0;
   }
 }
