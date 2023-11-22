@@ -103,24 +103,26 @@ namespace ackRecieveClass
 uint8_t isSleepModeOn = 1;
 int64_t lastAckRecieved = 0;
 
-IRAM_ATTR void writeLog()
-{
-  SPIFFS.mkdir("logs");
-  char writeFileName[32] = "/logs/00001.bin";
-  File writeFp = SPIFFS.open(writeFileName, "a");
-  writeFp.print("time,enc_pcnt,pwm_ratio,angle,d_angle\r\n");
-  for (int i = 0; i < MDLogMemIndex; i++)
-  {
-    writeFp.printf("%ld,%d,%d,%e,%e\r\n", MDLogDataMem[i]._time, MDLogDataMem[i]._enc_pcnt, MDLogDataMem[i]._pwm_ratio, MDLogDataMem[i]._motor_angle, MDLogDataMem[i]._d_motor_angle);
-  }
-  writeFp.close();
-}
+// IRAM_ATTR void writeLog()
+// {
+//   SPIFFS.mkdir("logs");
+//   char writeFileName[32] = "/logs/00001.bin";
+//   File writeFp = SPIFFS.open(writeFileName, "a");
+//   writeFp.print("time,enc_pcnt,pwm_ratio,angle,d_angle\r\n");
+//   for (int i = 0; i < MDLogMemIndex; i++)
+//   {
+//     writeFp.printf("%ld,%d,%d,%e,%e\r\n", MDLogDataMem[i]._time, MDLogDataMem[i]._enc_pcnt, MDLogDataMem[i]._pwm_ratio, MDLogDataMem[i]._motor_angle, MDLogDataMem[i]._d_motor_angle);
+//   }
+//   writeFp.flush();
+//   writeFp.close();
+// }
 
 IRAM_ATTR void controlDCM(void *parameters)
 {
-  portTickType xLastWakeTime = xTaskGetTickCount();
+
   for (;;)
   {
+    portTickType xLastWakeTime = xTaskGetTickCount();
     // 読み取り値をpulseに代入
     int16_t enc_pcnt; /**エンコーダ読み取り用変数*/
     MDLogDataMem[MDLogMemIndex]._time = micros();
@@ -138,7 +140,7 @@ IRAM_ATTR void controlDCM(void *parameters)
       pixels.show();
       Serial.printf("[%d] valve move end by over range\r\n>>", micros());
       // ログを記録
-      writeLog();
+      // writeLog();
       MDLogMemIndex = 0;
       isMdFinished = 0;
       isControlRunning = false;
@@ -196,7 +198,7 @@ IRAM_ATTR void controlDCM(void *parameters)
       pixels.show();
       Serial.printf("[%d] valve move end by control\r\n>>", micros());
       // ログを記録
-      writeLog();
+      // writeLog();
       MDLogMemIndex = 0;
       isMdFinished = 0;
       isControlRunning = false;
@@ -279,7 +281,7 @@ IRAM_ATTR void controlDCM(void *parameters)
         pixels.show();
         Serial.printf("[%d] valve move end by fill log\r\n>>", micros());
         // ログを記録
-        writeLog();
+        // writeLog();
         MDLogMemIndex = 0;
         isMdFinished = 0;
         isControlRunning = false;
